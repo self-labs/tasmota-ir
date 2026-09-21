@@ -222,6 +222,7 @@ class TasmotaIrOptionsFlow(OptionsFlow):
         """Start at the menu."""
         self._editing: str | None = None
         self._pending: dict[str, Any] = {}
+        self._command_choices: list[tuple[str, str]] = []
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
@@ -229,7 +230,7 @@ class TasmotaIrOptionsFlow(OptionsFlow):
         """Offer to add, edit or remove an appliance."""
         return self.async_show_menu(
             step_id="init",
-            menu_options=["add", "add_climate", "edit", "remove"],
+            menu_options=["add", "add_climate", "edit", "remove", "remove_command"],
         )
 
     async def async_step_add(
@@ -351,6 +352,49 @@ class TasmotaIrOptionsFlow(OptionsFlow):
         }
         return self.async_create_entry(
             data={**self.config_entry.options, CONF_APPLIANCES: appliances}
+        )
+
+    async def async_step_remove_command(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Forget one learned command, and take its button with it.
+
+        The same thing ``remote.delete_command`` does, reachable from the place
+        people already go to manage the board. A service call is not where
+        anyone looks for "delete the button I learned wrong".
+        """
+        coordinator: TasmotaIrCoordinator = self.config_entry.runtime_data
+
+        if user_input is not None:
+            appliance, command = self._command_choices[int(user_input["command"])]
+            await coordinator.async_delete_code(appliance, command)
+            # Options are unchanged: the code lived in the store, not here.
+            return self.async_create_entry(data=dict(self.config_entry.options))
+
+        self._command_choices = sorted(
+            (appliance, command)
+            for appliance, commands in coordinator.codes.items()
+            for command in commands
+        )
+        if not self._command_choices:
+            return self.async_abort(reason="no_commands")
+
+        options = [
+            selector.SelectOptionDict(value=str(i), label=f"{a} / {c}")
+            for i, (a, c) in enumerate(self._command_choices)
+        ]
+        return self.async_show_form(
+            step_id="remove_command",
+            data_schema=vol.Schema(
+                {
+                    vol.Required("command"): selector.SelectSelector(
+                        selector.SelectSelectorConfig(
+                            options=options,
+                            mode=selector.SelectSelectorMode.LIST,
+                        )
+                    )
+                }
+            ),
         )
 
     def _appliance_schema(self) -> vol.Schema:

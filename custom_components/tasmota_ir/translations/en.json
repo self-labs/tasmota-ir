@@ -31,7 +31,8 @@
           "add": "Add an appliance",
           "edit": "Change an emitter",
           "remove": "Remove an appliance",
-          "add_climate": "Add an air conditioner"
+          "add_climate": "Add an air conditioner",
+          "remove_command": "Delete a learned command"
         }
       },
       "add": {
@@ -67,10 +68,18 @@
       "learn_climate": {
         "title": "Point the remote at the board",
         "description": "Press any key on the remote of '{name}' while this window is open. The firmware decodes the whole frame, so the vendor, the model and the supported modes come from the unit itself. There is nothing to look up in a manual."
+      },
+      "remove_command": {
+        "title": "Delete a learned command",
+        "description": "Pick the command you learned wrong. Its button disappears with it, and you can learn it again from scratch.",
+        "data": {
+          "command": "Command"
+        }
       }
     },
     "abort": {
-      "no_appliances": "No appliance has been added yet."
+      "no_appliances": "No appliance has been added yet.",
+      "no_commands": "Nothing has been learned on this board yet."
     },
     "error": {
       "no_hvac_frame": "No air conditioner frame was decoded. Press a key on the remote of the unit, pointed at the receiver, one press on its own. A remote that is not an air conditioner will not work here: use 'Add an appliance' for those."

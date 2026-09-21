@@ -31,7 +31,8 @@
           "add": "Acrescentar aparelho",
           "edit": "Trocar o emissor",
           "remove": "Remover aparelho",
-          "add_climate": "Acrescentar ar-condicionado"
+          "add_climate": "Acrescentar ar-condicionado",
+          "remove_command": "Apagar comando aprendido"
         }
       },
       "add": {
@@ -67,10 +68,18 @@
       "learn_climate": {
         "title": "Aponte o controle para a placa",
         "description": "Aperte qualquer tecla do controle do '{name}' com esta janela aberta. O firmware decodifica o quadro inteiro, então o fabricante, o modelo e os modos suportados vêm do próprio aparelho. Não há nada para procurar em manual."
+      },
+      "remove_command": {
+        "title": "Apagar comando aprendido",
+        "description": "Escolha o comando que foi aprendido errado. O botão dele some junto, e você pode aprender de novo do zero.",
+        "data": {
+          "command": "Comando"
+        }
       }
     },
     "abort": {
-      "no_appliances": "Nenhum aparelho foi acrescentado ainda."
+      "no_appliances": "Nenhum aparelho foi acrescentado ainda.",
+      "no_commands": "Nada foi aprendido nesta placa ainda."
     },
     "error": {
       "no_hvac_frame": "Nenhum quadro de ar-condicionado foi decodificado. Aperte uma tecla do controle do aparelho, apontado para o receptor, uma tecla de cada vez. Controle que não é de ar-condicionado não funciona aqui: para esses, use 'Acrescentar aparelho'."

@@ -9,6 +9,17 @@ about compatibility, only when it was published.
 
 ## [Unreleased]
 
+## [2026.9.5] - 2026-09-21
+
+### Added
+
+- **Delete a learned command from the interface**, under **Configure → Delete a learned command**. `remote.delete_command` already did this, but a service call is not where anyone looks for "delete the button I learned wrong". The command is picked from a list of everything the board knows, and its button disappears with it.
+
+### Changed
+
+- **The README is now the full reference** for what the integration does: where to run the actions, the three kinds of capture refused on purpose, how emitters are assigned, the known limits, and the fact that moving an appliance to another emitter needs no relearning because the emitter is looked up at send time.
+
+
 ## [2026.9.4] - 2026-09-21
 
 ### Fixed
@@ -57,7 +68,8 @@ about compatibility, only when it was published.
 - **Partial captures are discarded at capture time.** A truncated frame arrives with `Data` of `"0x"` and `Bits` of `0`, and storing one produces a command that is accepted, listed and reproduces nothing.
 - **Entities attach to the board's existing device.** The device info declares `connections={(CONNECTION_NETWORK_MAC, mac)}`, which is what the Tasmota integration uses, so the IR entities sit next to the board's diagnostics instead of forming a second device for the same hardware.
 
-[Unreleased]: https://github.com/self-labs/tasmota-ir/compare/v2026.9.4...HEAD
+[Unreleased]: https://github.com/self-labs/tasmota-ir/compare/v2026.9.5...HEAD
+[2026.9.5]: https://github.com/self-labs/tasmota-ir/compare/v2026.9.4...v2026.9.5
 [2026.9.4]: https://github.com/self-labs/tasmota-ir/compare/v2026.9.3...v2026.9.4
 [2026.9.3]: https://github.com/self-labs/tasmota-ir/compare/v2026.9.2...v2026.9.3
 [2026.9.2]: https://github.com/self-labs/tasmota-ir/compare/v2026.9.1...v2026.9.2
