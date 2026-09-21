@@ -3,9 +3,13 @@
 All notable changes to this project are documented in this file.
 
 The format is based on [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+and the versions follow **CalVer `YYYY.M.R`** (year, month with no leading zero,
+revision within the month), **not** Semantic Versioning: `2026.9.1` says nothing
+about compatibility, only when it was published.
 
 ## [Unreleased]
+
+## [2026.9.1] - 2026-09-21
 
 ### Added
 
@@ -23,4 +27,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Partial captures are discarded at capture time.** A truncated frame arrives with `Data` of `"0x"` and `Bits` of `0`, and storing one produces a command that is accepted, listed and reproduces nothing.
 - **Entities attach to the board's existing device.** The device info declares `connections={(CONNECTION_NETWORK_MAC, mac)}`, which is what the Tasmota integration uses, so the IR entities sit next to the board's diagnostics instead of forming a second device for the same hardware.
 
-[Unreleased]: https://github.com/self-labs/tasmota-ir/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/self-labs/tasmota-ir/compare/v2026.9.1...HEAD
+[2026.9.1]: https://github.com/self-labs/tasmota-ir/releases/tag/v2026.9.1

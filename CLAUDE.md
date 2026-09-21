@@ -73,9 +73,11 @@ hacs.json             HACS metadata
 ## Changelog
 
 `CHANGELOG.md` follows [Keep a Changelog 1.1.0](https://keepachangelog.com/en/1.1.0/)
-with semantic versions, because HACS reads releases and users upgrade across
-them. A notable change lands in `[Unreleased]` before the task is reported as
-done. `manifest.json` carries the same version as the release tag.
+with **CalVer `YYYY.M.R`** versions: year, month with no leading zero, and the
+revision within that month, restarting at 1 whenever the month changes. The
+version says when it was published, not what it promises about compatibility.
+
+A notable change lands in `[Unreleased]` before the task is reported as done. `manifest.json` carries the same version as the release tag.
 
 ## Related repositories
 

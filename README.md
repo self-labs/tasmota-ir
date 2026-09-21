@@ -1,6 +1,6 @@
-# Tasmota IR
+[![HACS Custom](https://img.shields.io/badge/HACS-Custom-41BDF5?logo=home-assistant&logoColor=white)](https://hacs.xyz/) [![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2024.11%2B-41BDF5?logo=home-assistant&logoColor=white)](https://www.home-assistant.io/) [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
 
-[![hacs][hacs-badge]][hacs-url]
+# 📡 Tasmota IR
 
 Learn and send infrared from Home Assistant with any Tasmota board, through the
 standard `remote` services. No input helpers, no capture automation, no send
@@ -43,10 +43,34 @@ of their own.
   you want to learn. The full IR driver (`USE_IR_REMOTE_FULL`) is required for
   more than one emitter and for air conditioners.
 
-## Installation
+## Install
 
-Through HACS, as a custom repository pointing at this one. Then
-**Settings → Devices & Services → Add Integration → Tasmota IR**.
+### HACS
+
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=self-labs&repository=tasmota-ir&category=integration)
+
+The button opens this repository straight in your HACS. Click **Download**, then
+restart Home Assistant.
+
+It works through [my.home-assistant.io](https://my.home-assistant.io/), which
+only knows how to reach your instance after you set your own URL there once,
+under **Settings → System → Network → Home Assistant URL**.
+
+<details>
+<summary>Doing it by hand</summary>
+
+1. HACS → three-dot menu → **Custom repositories**.
+2. URL: `https://github.com/self-labs/tasmota-ir`, type **Integration** → **ADD**.
+3. Open the entry and click **Download**.
+4. Restart Home Assistant.
+
+</details>
+
+### Then add the board
+
+[![Open your Home Assistant instance and start setting up a new integration.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=tasmota_ir)
+
+Or **Settings → Devices & Services → Add Integration → Tasmota IR**.
 
 The board is picked from a list: Home Assistant reads the discovery topic
 Tasmota already publishes. How many emitters it has is not a question, it is
@@ -94,5 +118,3 @@ issue with the reply your board gives to `Gpio 255`.
 
 MIT. See [LICENSE](./LICENSE).
 
-[hacs-badge]: https://img.shields.io/badge/HACS-Custom-41BDF5.svg
-[hacs-url]: https://github.com/hacs/integration
