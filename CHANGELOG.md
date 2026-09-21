@@ -9,6 +9,13 @@ about compatibility, only when it was published.
 
 ## [Unreleased]
 
+## [2026.9.4] - 2026-09-21
+
+### Fixed
+
+- **A held key could be learned as nothing.** While a key is held, a NEC remote sends the real frame once and then a short burst every 108 ms that only means "keep repeating the last one": zero bits, a run of F's in `Data` and a three pulse `RawData`. That burst carries no command, but it passed the capture filter on the strength of its `RawData`, so a learn window that opened after the real frame would store it as raw and create a button that does nothing. Repeat frames are now discarded. Measured on an LG television: one 32 bit frame followed by eighteen of these in 2.4 seconds.
+
+
 ## [2026.9.3] - 2026-09-21
 
 ### Changed
@@ -50,7 +57,8 @@ about compatibility, only when it was published.
 - **Partial captures are discarded at capture time.** A truncated frame arrives with `Data` of `"0x"` and `Bits` of `0`, and storing one produces a command that is accepted, listed and reproduces nothing.
 - **Entities attach to the board's existing device.** The device info declares `connections={(CONNECTION_NETWORK_MAC, mac)}`, which is what the Tasmota integration uses, so the IR entities sit next to the board's diagnostics instead of forming a second device for the same hardware.
 
-[Unreleased]: https://github.com/self-labs/tasmota-ir/compare/v2026.9.3...HEAD
+[Unreleased]: https://github.com/self-labs/tasmota-ir/compare/v2026.9.4...HEAD
+[2026.9.4]: https://github.com/self-labs/tasmota-ir/compare/v2026.9.3...v2026.9.4
 [2026.9.3]: https://github.com/self-labs/tasmota-ir/compare/v2026.9.2...v2026.9.3
 [2026.9.2]: https://github.com/self-labs/tasmota-ir/compare/v2026.9.1...v2026.9.2
 [2026.9.1]: https://github.com/self-labs/tasmota-ir/releases/tag/v2026.9.1

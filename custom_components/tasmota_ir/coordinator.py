@@ -387,7 +387,17 @@ def is_usable_code(received: dict[str, Any]) -> bool:
     A truncated frame arrives with an empty ``Data`` and zero ``Bits``, and the
     library labels it UNKNOWN. Storing one of those produces a command that is
     accepted, saved, shown in the interface and does nothing at all.
+
+    A repeat frame is the other trap. While a key is held, a NEC remote sends
+    the real frame once and then a short burst every 108 ms that only means
+    "keep repeating the last one": zero bits, a run of F's in ``Data``, and a
+    three pulse ``RawData``. That burst carries no command, so a learn that
+    started after the real frame would otherwise store it as raw, and the
+    button it creates would do nothing. Measured on a LG television: one
+    32 bit frame followed by eighteen of these in 2.4 seconds.
     """
+    if received.get("Repeat") and not received.get("Bits"):
+        return False
     data = received.get("Data")
     bits = received.get("Bits")
     if isinstance(data, str) and data not in ("", "0x") and bits:
