@@ -1,0 +1,54 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Choose the board",
+        "description": "These are the Tasmota boards announcing themselves on your broker. Pick the one with the IR emitters.",
+        "data": { "board": "Board" }
+      },
+      "manual": {
+        "title": "Enter the topic",
+        "description": "Use the value of Topic in the board's MQTT configuration. Leave FullTopic alone unless you changed it on the board.",
+        "data": { "topic": "Topic", "full_topic": "FullTopic" }
+      }
+    },
+    "abort": {
+      "already_configured": "This board is already set up.",
+      "mqtt_unavailable": "MQTT is not available. Set up the MQTT integration first."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Appliances",
+        "description": "An appliance is a name plus the emitter pointed at it. Set it once here and you never type an emitter number again.",
+        "menu_options": {
+          "add": "Add an appliance",
+          "edit": "Change an emitter",
+          "remove": "Remove an appliance"
+        }
+      },
+      "add": {
+        "title": "Add an appliance",
+        "description": "Use the same name you will pass as 'device' when learning and sending.",
+        "data": { "name": "Name", "channel": "Emitter" }
+      },
+      "edit": {
+        "title": "Change an emitter",
+        "data": { "name": "Appliance", "channel": "Emitter" }
+      },
+      "remove": {
+        "title": "Remove an appliance",
+        "description": "The codes it learned are kept until you delete them with remote.delete_command.",
+        "data": { "name": "Appliance" }
+      }
+    },
+    "abort": {
+      "no_appliances": "No appliance has been added yet."
+    }
+  },
+  "entity": {
+    "remote": { "tasmota_ir": { "name": "[%key:component::tasmota_ir::title%]" } }
+  },
+  "title": "Tasmota IR"
+}

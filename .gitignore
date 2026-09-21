@@ -1,0 +1,43 @@
+# tasmota-ir - files that never enter the repository
+
+# ---- Python bytecode and build artefacts ----
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+
+# ---- Virtual environments ----
+.venv/
+venv/
+
+# ---- Tests and coverage ----
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# ---- Home Assistant test instance ----
+# A local HA config used to run the integration leaves its whole state here,
+# including the broker credentials and the .storage with the learned codes.
+config/
+.storage/
+
+# ---- Environment ----
+.env
+.env.*
+!.env.example
+
+# ---- Logs ----
+*.log
+
+# ---- Generated and regenerable ----
+graphify-out/
+
+# ---- OS and editors ----
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

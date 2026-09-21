@@ -1,0 +1,51 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Escolha a placa",
+        "description": "Estas são as placas Tasmota que estão se anunciando no seu broker. Escolha a que tem os emissores de infravermelho.",
+        "data": { "board": "Placa" }
+      },
+      "manual": {
+        "title": "Informe o tópico",
+        "description": "Use o valor de Topic na configuração MQTT da placa. Não mexa no FullTopic, a menos que você o tenha alterado na placa.",
+        "data": { "topic": "Tópico", "full_topic": "FullTopic" }
+      }
+    },
+    "abort": {
+      "already_configured": "Esta placa já está configurada.",
+      "mqtt_unavailable": "O MQTT não está disponível. Configure a integração MQTT antes."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Aparelhos",
+        "description": "Um aparelho é um nome mais o emissor apontado para ele. Configure uma vez aqui e você nunca mais digita número de emissor.",
+        "menu_options": {
+          "add": "Acrescentar aparelho",
+          "edit": "Trocar o emissor",
+          "remove": "Remover aparelho"
+        }
+      },
+      "add": {
+        "title": "Acrescentar aparelho",
+        "description": "Use o mesmo nome que você vai passar em 'device' ao aprender e ao emitir.",
+        "data": { "name": "Nome", "channel": "Emissor" }
+      },
+      "edit": {
+        "title": "Trocar o emissor",
+        "data": { "name": "Aparelho", "channel": "Emissor" }
+      },
+      "remove": {
+        "title": "Remover aparelho",
+        "description": "Os códigos aprendidos continuam guardados até você apagá-los com o remote.delete_command.",
+        "data": { "name": "Aparelho" }
+      }
+    },
+    "abort": {
+      "no_appliances": "Nenhum aparelho foi acrescentado ainda."
+    }
+  },
+  "title": "Tasmota IR"
+}
