@@ -14,7 +14,12 @@ from .coordinator import TasmotaIrCoordinator
 
 _LOGGER = logging.getLogger(__name__)
 
-PLATFORMS: list[Platform] = [Platform.REMOTE, Platform.BUTTON]
+PLATFORMS: list[Platform] = [
+    Platform.REMOTE,
+    Platform.BUTTON,
+    Platform.CLIMATE,
+    Platform.EVENT,
+]
 
 type TasmotaIrConfigEntry = ConfigEntry[TasmotaIrCoordinator]
 

@@ -4,12 +4,17 @@
       "user": {
         "title": "Escolha a placa",
         "description": "Estas são as placas Tasmota que estão se anunciando no seu broker. Escolha a que tem os emissores de infravermelho.",
-        "data": { "board": "Placa" }
+        "data": {
+          "board": "Placa"
+        }
       },
       "manual": {
         "title": "Informe o tópico",
         "description": "Use o valor de Topic na configuração MQTT da placa. Não mexa no FullTopic, a menos que você o tenha alterado na placa.",
-        "data": { "topic": "Tópico", "full_topic": "FullTopic" }
+        "data": {
+          "topic": "Tópico",
+          "full_topic": "FullTopic"
+        }
       }
     },
     "abort": {
@@ -25,26 +30,50 @@
         "menu_options": {
           "add": "Acrescentar aparelho",
           "edit": "Trocar o emissor",
-          "remove": "Remover aparelho"
+          "remove": "Remover aparelho",
+          "add_climate": "Acrescentar ar-condicionado"
         }
       },
       "add": {
         "title": "Acrescentar aparelho",
         "description": "Use o mesmo nome que você vai passar em 'device' ao aprender e ao emitir.",
-        "data": { "name": "Nome", "channel": "Emissor" }
+        "data": {
+          "name": "Nome",
+          "channel": "Emissor"
+        }
       },
       "edit": {
         "title": "Trocar o emissor",
-        "data": { "name": "Aparelho", "channel": "Emissor" }
+        "data": {
+          "name": "Aparelho",
+          "channel": "Emissor"
+        }
       },
       "remove": {
         "title": "Remover aparelho",
         "description": "Os códigos aprendidos continuam guardados até você apagá-los com o remote.delete_command.",
-        "data": { "name": "Aparelho" }
+        "data": {
+          "name": "Aparelho"
+        }
+      },
+      "add_climate": {
+        "title": "Acrescentar ar-condicionado",
+        "description": "Dê um nome e diga qual emissor aponta para ele. O fabricante e o modelo são lidos do seu próprio controle no passo seguinte.",
+        "data": {
+          "name": "Nome",
+          "channel": "Emissor"
+        }
+      },
+      "learn_climate": {
+        "title": "Aponte o controle para a placa",
+        "description": "Aperte qualquer tecla do controle do '{name}' com esta janela aberta. O firmware decodifica o quadro inteiro, então o fabricante, o modelo e os modos suportados vêm do próprio aparelho. Não há nada para procurar em manual."
       }
     },
     "abort": {
       "no_appliances": "Nenhum aparelho foi acrescentado ainda."
+    },
+    "error": {
+      "no_hvac_frame": "Nenhum quadro de ar-condicionado foi decodificado. Aperte uma tecla do controle do aparelho, apontado para o receptor, uma tecla de cada vez. Controle que não é de ar-condicionado não funciona aqui: para esses, use 'Acrescentar aparelho'."
     }
   },
   "title": "Tasmota IR"

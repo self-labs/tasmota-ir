@@ -33,9 +33,16 @@ from .const import (
     CONF_HAS_RECEIVER,
     CONF_KIND,
     CONF_MAC,
+    CONF_MAX_TEMP,
+    CONF_MIN_TEMP,
+    CONF_MODEL,
+    CONF_VENDOR,
     CONF_TOPIC,
     DOMAIN,
+    KEY_IRHVAC,
+    KIND_CLIMATE,
     KIND_GENERIC,
+    LEARN_TIMEOUT,
     MAX_CHANNELS,
 )
 from .coordinator import TasmotaIrCoordinator
@@ -46,6 +53,11 @@ DISCOVERY_TOPIC = "tasmota/discovery/+/config"
 DISCOVERY_WINDOW = 4.0
 
 MANUAL = "__manual__"
+
+# The range the config flow proposes. Below 18 nobody uses, and every degree
+# offered is a row in the card the user has to scroll past.
+DEFAULT_MIN_TEMP = 18
+DEFAULT_MAX_TEMP = 30
 
 
 async def _async_discover_boards(hass) -> dict[str, dict[str, Any]]:
@@ -209,13 +221,15 @@ class TasmotaIrOptionsFlow(OptionsFlow):
     def __init__(self) -> None:
         """Start at the menu."""
         self._editing: str | None = None
+        self._pending: dict[str, Any] = {}
 
     async def async_step_init(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Offer to add, edit or remove an appliance."""
         return self.async_show_menu(
-            step_id="init", menu_options=["add", "edit", "remove"]
+            step_id="init",
+            menu_options=["add", "add_climate", "edit", "remove"],
         )
 
     async def async_step_add(
@@ -281,6 +295,62 @@ class TasmotaIrOptionsFlow(OptionsFlow):
         return self.async_show_form(
             step_id="remove",
             data_schema=vol.Schema({vol.Required("name"): vol.In(sorted(appliances))}),
+        )
+
+    async def async_step_add_climate(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Name an air conditioner and say which emitter points at it."""
+        if user_input is not None:
+            self._pending = {
+                "name": user_input["name"],
+                CONF_CHANNEL: int(user_input[CONF_CHANNEL]),
+            }
+            return await self.async_step_learn_climate()
+
+        return self.async_show_form(
+            step_id="add_climate", data_schema=self._appliance_schema()
+        )
+
+    async def async_step_learn_climate(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Read the vendor and model straight from the unit's own remote.
+
+        Tasmota decodes an air conditioner frame into a full state, vendor and
+        model included. Asking the user to find that in a manual, when the
+        firmware already knows it, would be asking for something we can read.
+        """
+        if user_input is None:
+            return self.async_show_form(
+                step_id="learn_climate",
+                data_schema=vol.Schema({}),
+                description_placeholders={"name": self._pending["name"]},
+            )
+
+        coordinator: TasmotaIrCoordinator = self.config_entry.runtime_data
+        received = await coordinator.async_wait_for_code(LEARN_TIMEOUT)
+
+        if received is None or KEY_IRHVAC not in received:
+            return self.async_show_form(
+                step_id="learn_climate",
+                data_schema=vol.Schema({}),
+                errors={"base": "no_hvac_frame"},
+                description_placeholders={"name": self._pending["name"]},
+            )
+
+        hvac = received[KEY_IRHVAC]
+        appliances = dict(self.config_entry.options.get(CONF_APPLIANCES, {}))
+        appliances[self._pending["name"]] = {
+            CONF_CHANNEL: self._pending[CONF_CHANNEL],
+            CONF_KIND: KIND_CLIMATE,
+            CONF_VENDOR: hvac.get("Vendor", ""),
+            CONF_MODEL: hvac.get("Model", ""),
+            CONF_MIN_TEMP: DEFAULT_MIN_TEMP,
+            CONF_MAX_TEMP: DEFAULT_MAX_TEMP,
+        }
+        return self.async_create_entry(
+            data={**self.config_entry.options, CONF_APPLIANCES: appliances}
         )
 
     def _appliance_schema(self) -> vol.Schema:

@@ -4,12 +4,17 @@
       "user": {
         "title": "Choose the board",
         "description": "These are the Tasmota boards announcing themselves on your broker. Pick the one with the IR emitters.",
-        "data": { "board": "Board" }
+        "data": {
+          "board": "Board"
+        }
       },
       "manual": {
         "title": "Enter the topic",
         "description": "Use the value of Topic in the board's MQTT configuration. Leave FullTopic alone unless you changed it on the board.",
-        "data": { "topic": "Topic", "full_topic": "FullTopic" }
+        "data": {
+          "topic": "Topic",
+          "full_topic": "FullTopic"
+        }
       }
     },
     "abort": {
@@ -25,30 +30,58 @@
         "menu_options": {
           "add": "Add an appliance",
           "edit": "Change an emitter",
-          "remove": "Remove an appliance"
+          "remove": "Remove an appliance",
+          "add_climate": "Add an air conditioner"
         }
       },
       "add": {
         "title": "Add an appliance",
         "description": "Use the same name you will pass as 'device' when learning and sending.",
-        "data": { "name": "Name", "channel": "Emitter" }
+        "data": {
+          "name": "Name",
+          "channel": "Emitter"
+        }
       },
       "edit": {
         "title": "Change an emitter",
-        "data": { "name": "Appliance", "channel": "Emitter" }
+        "data": {
+          "name": "Appliance",
+          "channel": "Emitter"
+        }
       },
       "remove": {
         "title": "Remove an appliance",
         "description": "The codes it learned are kept until you delete them with remote.delete_command.",
-        "data": { "name": "Appliance" }
+        "data": {
+          "name": "Appliance"
+        }
+      },
+      "add_climate": {
+        "title": "Add an air conditioner",
+        "description": "Name it and say which emitter points at it. The vendor and the model are read from your own remote in the next step.",
+        "data": {
+          "name": "Name",
+          "channel": "Emitter"
+        }
+      },
+      "learn_climate": {
+        "title": "Point the remote at the board",
+        "description": "Press any key on the remote of '{name}' while this window is open. The firmware decodes the whole frame, so the vendor, the model and the supported modes come from the unit itself. There is nothing to look up in a manual."
       }
     },
     "abort": {
       "no_appliances": "No appliance has been added yet."
+    },
+    "error": {
+      "no_hvac_frame": "No air conditioner frame was decoded. Press a key on the remote of the unit, pointed at the receiver, one press on its own. A remote that is not an air conditioner will not work here: use 'Add an appliance' for those."
     }
   },
   "entity": {
-    "remote": { "tasmota_ir": { "name": "[%key:component::tasmota_ir::title%]" } }
+    "remote": {
+      "tasmota_ir": {
+        "name": "[%key:component::tasmota_ir::title%]"
+      }
+    }
   },
   "title": "Tasmota IR"
 }
