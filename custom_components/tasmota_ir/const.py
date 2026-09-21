@@ -59,3 +59,4 @@ MAX_CODE_BYTES: Final = 1000
 # either platform importing the other.
 SIGNAL_CODES_UPDATED: Final = f"{DOMAIN}_codes_updated_{{entry_id}}"
 SIGNAL_IR_RECEIVED: Final = f"{DOMAIN}_ir_received_{{entry_id}}"
+SIGNAL_AVAILABILITY: Final = f"{DOMAIN}_availability_{{entry_id}}"

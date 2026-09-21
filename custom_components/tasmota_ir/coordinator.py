@@ -33,6 +33,7 @@ from .const import (
     MAX_CHANNELS,
     MAX_CODE_BYTES,
     PROBE_TIMEOUT,
+    SIGNAL_AVAILABILITY,
     SIGNAL_CODES_UPDATED,
     SIGNAL_IR_RECEIVED,
     STORAGE_KEY_FORMAT,
@@ -56,7 +57,11 @@ class TasmotaIrCoordinator:
         self.entry = entry
         self.topic: str = entry.data[CONF_TOPIC]
         self.full_topic: str = entry.data.get(CONF_FULL_TOPIC, "%prefix%/%topic%/")
-        self.available = False
+        # Optimistic until the board says otherwise. The retained LWT arrives
+        # within milliseconds of subscribing and corrects this, while starting
+        # at False would leave every entity unavailable on a board that was
+        # configured without a last will at all.
+        self.available = True
 
         self._store: Store[dict[str, dict[str, Any]]] = Store(
             hass, STORAGE_VERSION, STORAGE_KEY_FORMAT.format(entry_id=entry.entry_id)
@@ -127,8 +132,20 @@ class TasmotaIrCoordinator:
 
     @callback
     def _handle_lwt(self, message: mqtt.ReceiveMessage) -> None:
-        """Track whether the board is online."""
-        self.available = message.payload == "Online"
+        """Track whether the board is online, and tell the entities.
+
+        Flipping the flag is not enough: an entity reads ``available`` when its
+        state is written, so without this dispatch it keeps whatever it had at
+        the moment it was created. The retained LWT almost always lands after
+        the platforms are set up, which is exactly when that goes wrong.
+        """
+        available = message.payload == "Online"
+        if available == self.available:
+            return
+        self.available = available
+        async_dispatcher_send(
+            self.hass, SIGNAL_AVAILABILITY.format(entry_id=self.entry.entry_id)
+        )
 
     @callback
     def _handle_result(self, message: mqtt.ReceiveMessage) -> None:

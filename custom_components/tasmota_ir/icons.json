@@ -1,0 +1,12 @@
+{
+  "entity": {
+    "event": {
+      "receiver": {
+        "default": "mdi:remote",
+        "state": {
+          "ir_received": "mdi:remote"
+        }
+      }
+    }
+  }
+}

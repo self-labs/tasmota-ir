@@ -9,6 +9,15 @@ about compatibility, only when it was published.
 
 ## [Unreleased]
 
+### Added
+
+- **Brand artwork**, so the integration stops showing "icon not available" on its device and integration pages. It is the project's own icon from `home-assistant/brands` with the universal IR symbol added in the bottom right corner, and the badge is drawn in the colour read out of each source file, so the light variant stays black and the dark one stays Tasmota blue. Anyone installing it sees the icon they already know, with infrared on it.
+
+### Fixed
+
+- **Every entity showed as unavailable.** The last will handler flipped the availability flag without telling the entities, and an entity only reads `available` when its state is written, so it kept whatever it had when it was created. The retained LWT almost always lands after the platforms are set up, which is exactly when that goes wrong. The coordinator now dispatches on change, and it starts optimistic rather than unavailable, so a board configured without a last will at all is not stuck offline forever.
+
+
 ## [2026.9.1] - 2026-09-21
 
 ### Added
