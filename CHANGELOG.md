@@ -9,6 +9,8 @@ about compatibility, only when it was published.
 
 ## [Unreleased]
 
+## [2026.9.2] - 2026-09-21
+
 ### Added
 
 - **Brand artwork**, so the integration stops showing "icon not available" on its device and integration pages. It is the project's own icon from `home-assistant/brands` with the universal IR symbol added in the bottom right corner, and the badge is drawn in the colour read out of each source file, so the light variant stays black and the dark one stays Tasmota blue. Anyone installing it sees the icon they already know, with infrared on it.
@@ -36,5 +38,6 @@ about compatibility, only when it was published.
 - **Partial captures are discarded at capture time.** A truncated frame arrives with `Data` of `"0x"` and `Bits` of `0`, and storing one produces a command that is accepted, listed and reproduces nothing.
 - **Entities attach to the board's existing device.** The device info declares `connections={(CONNECTION_NETWORK_MAC, mac)}`, which is what the Tasmota integration uses, so the IR entities sit next to the board's diagnostics instead of forming a second device for the same hardware.
 
-[Unreleased]: https://github.com/self-labs/tasmota-ir/compare/v2026.9.1...HEAD
+[Unreleased]: https://github.com/self-labs/tasmota-ir/compare/v2026.9.2...HEAD
+[2026.9.2]: https://github.com/self-labs/tasmota-ir/compare/v2026.9.1...v2026.9.2
 [2026.9.1]: https://github.com/self-labs/tasmota-ir/releases/tag/v2026.9.1
