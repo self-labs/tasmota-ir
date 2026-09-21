@@ -9,6 +9,18 @@ about compatibility, only when it was published.
 
 ## [Unreleased]
 
+## [2026.9.3] - 2026-09-21
+
+### Changed
+
+- **Learning refuses an air conditioner frame** and points at the air conditioner flow instead. One capture from one of those remotes is one temperature in one mode, and replaying it is nothing like having the remote in hand. The frame it refuses is the same one the climate flow reads the vendor and the model out of.
+- **Raw codes warn when the appliance is not on emitter 1.** The firmware's raw send form takes no channel at all, so it always leaves through the first emitter. That is the firmware's limit rather than a choice here, and it is now said out loud in the log instead of failing quietly.
+
+### Fixed
+
+- **A learned raw code could never be sent.** `CmndIrSend` in the firmware routes on whether the payload contains a brace, so anything with one goes to the JSON parser, and that parser has no protocol called `RAW`. Every capture that did not decode was therefore stored in a shape the board answers with `{"IRSend":"No Bits or Data"}`. Raw now goes as the plain `IRSend <freq>,<data>` form the firmware actually accepts, with 38 kHz recorded alongside the capture.
+- **The remote's attributes went stale.** The list of appliances and commands was built when the entity was created and never rewritten, so a remote that had just learned a command still reported none. It now follows the store, the same way the buttons already did.
+
 ## [2026.9.2] - 2026-09-21
 
 ### Added
@@ -38,6 +50,7 @@ about compatibility, only when it was published.
 - **Partial captures are discarded at capture time.** A truncated frame arrives with `Data` of `"0x"` and `Bits` of `0`, and storing one produces a command that is accepted, listed and reproduces nothing.
 - **Entities attach to the board's existing device.** The device info declares `connections={(CONNECTION_NETWORK_MAC, mac)}`, which is what the Tasmota integration uses, so the IR entities sit next to the board's diagnostics instead of forming a second device for the same hardware.
 
-[Unreleased]: https://github.com/self-labs/tasmota-ir/compare/v2026.9.2...HEAD
+[Unreleased]: https://github.com/self-labs/tasmota-ir/compare/v2026.9.3...HEAD
+[2026.9.3]: https://github.com/self-labs/tasmota-ir/compare/v2026.9.2...v2026.9.3
 [2026.9.2]: https://github.com/self-labs/tasmota-ir/compare/v2026.9.1...v2026.9.2
 [2026.9.1]: https://github.com/self-labs/tasmota-ir/releases/tag/v2026.9.1

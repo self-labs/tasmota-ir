@@ -32,6 +32,12 @@ CMND_GPIO: Final = "Gpio"
 KEY_IR_RECEIVED: Final = "IrReceived"
 KEY_IRHVAC: Final = "IRHVAC"
 KEY_CHANNEL: Final = "Channel"
+KEY_RAW_DATA: Final = "RawData"
+PROTOCOL_RAW: Final = "RAW"
+# Raw codes do not travel as JSON: CmndIrSend routes on the presence of a
+# brace, so a raw send has to be the plain "IRSend <freq>,<data>" form. 38 kHz
+# is what consumer infrared uses and what the receiver assumes.
+RAW_FREQUENCY: Final = 38000
 
 # The firmware counts IR emitters from 1 and reports them as IRsend1..IRsendN
 # in the reply to the Gpio command. Sixteen is the ceiling MAX_IRSEND imposes.

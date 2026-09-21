@@ -24,18 +24,20 @@ from homeassistant.components.remote import (
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
+from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
 
 from .const import (
-    CMND_IRSEND,
     DOMAIN,
     LEARN_TIMEOUT,
+    SIGNAL_CODES_UPDATED,
 )
 from .coordinator import (
     CodeTooLargeError,
     TasmotaIrCoordinator,
     extract_code,
+    is_hvac_frame,
 )
 from .entity import TasmotaIrEntity
 
@@ -69,10 +71,21 @@ class TasmotaIrRemote(TasmotaIrEntity, RemoteEntity, RestoreEntity):
         self._attr_is_on = True
 
     async def async_added_to_hass(self) -> None:
-        """Restore whether sending was left enabled."""
+        """Restore whether sending was left enabled, and follow the store."""
         await super().async_added_to_hass()
         if (state := await self.async_get_last_state()) is not None:
             self._attr_is_on = state.state != "off"
+        # Without this the attributes keep the picture they had at creation, so
+        # the interface shows no commands on a remote that has just learned one.
+        self.async_on_remove(
+            async_dispatcher_connect(
+                self.hass,
+                SIGNAL_CODES_UPDATED.format(
+                    entry_id=self.coordinator.entry.entry_id
+                ),
+                self.async_write_ha_state,
+            )
+        )
 
     async def async_turn_on(self, **kwargs: Any) -> None:
         """Allow sending again."""
@@ -108,9 +121,7 @@ class TasmotaIrRemote(TasmotaIrEntity, RemoteEntity, RestoreEntity):
                 if repeat or index:
                     await asyncio.sleep(delay)
                 try:
-                    await self.coordinator.async_send_json(
-                        CMND_IRSEND, code, channel=channel
-                    )
+                    await self.coordinator.async_send_code(code, channel=channel)
                 except CodeTooLargeError as err:
                     raise HomeAssistantError(
                         f"The code stored for '{name}' is too large for the board "
@@ -159,6 +170,14 @@ class TasmotaIrRemote(TasmotaIrEntity, RemoteEntity, RestoreEntity):
                     f"Nothing was received while learning '{name}'. Point the "
                     "remote at the receiver and press the key once, on its own: "
                     "two presses in a row decode as one broken frame."
+                )
+            if is_hvac_frame(received):
+                raise HomeAssistantError(
+                    f"That is an air conditioner remote, and storing it as "
+                    f"'{name}' would capture one temperature in one mode and "
+                    "nothing else. Add it through the integration options, "
+                    "'Add an air conditioner', which reads the vendor and the "
+                    "model from this same frame and then builds every command."
                 )
             try:
                 await self.coordinator.async_store_code(

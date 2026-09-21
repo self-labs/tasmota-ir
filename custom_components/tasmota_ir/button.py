@@ -22,7 +22,7 @@ from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.entity_registry import async_get as async_get_entity_registry
 
-from .const import CMND_IRSEND, DOMAIN, SIGNAL_CODES_UPDATED
+from .const import DOMAIN, SIGNAL_CODES_UPDATED
 from .coordinator import CodeTooLargeError, TasmotaIrCoordinator
 from .entity import TasmotaIrEntity
 
@@ -104,7 +104,7 @@ class TasmotaIrButton(TasmotaIrEntity, ButtonEntity):
             )
         channel = self.coordinator.channel_for(self._appliance)
         try:
-            await self.coordinator.async_send_json(CMND_IRSEND, code, channel=channel)
+            await self.coordinator.async_send_code(code, channel=channel)
         except CodeTooLargeError as err:
             raise HomeAssistantError(str(err)) from err
 

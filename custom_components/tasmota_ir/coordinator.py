@@ -21,6 +21,7 @@ from homeassistant.helpers.storage import Store
 
 from .const import (
     CMND_GPIO,
+    CMND_IRSEND,
     CONF_APPLIANCES,
     CONF_CHANNEL,
     CONF_FULL_TOPIC,
@@ -31,8 +32,12 @@ from .const import (
     KEY_CHANNEL,
     KEY_IR_RECEIVED,
     MAX_CHANNELS,
+    KEY_IRHVAC,
+    KEY_RAW_DATA,
     MAX_CODE_BYTES,
     PROBE_TIMEOUT,
+    PROTOCOL_RAW,
+    RAW_FREQUENCY,
     SIGNAL_AVAILABILITY,
     SIGNAL_CODES_UPDATED,
     SIGNAL_IR_RECEIVED,
@@ -212,6 +217,39 @@ class TasmotaIrCoordinator:
             )
         await self.async_send_raw(command, encoded)
 
+    async def async_send_code(
+        self, code: dict[str, Any], channel: int | None = None
+    ) -> None:
+        """Send a stored code, in whichever form the firmware accepts.
+
+        A decoded protocol goes as JSON and carries the emitter. A raw capture
+        cannot: ``CmndIrSend`` routes on whether the payload contains a brace,
+        so raw has to be the plain ``IRSend <freq>,<data>`` form, and that form
+        has no channel parameter at all. Raw therefore always leaves through the
+        first emitter, which is the firmware's limit and not a choice made here.
+        """
+        if code.get("Protocol") == PROTOCOL_RAW:
+            raw = code.get(KEY_RAW_DATA)
+            if not raw:
+                raise CodeTooLargeError("the stored raw code is empty")
+            frequency = code.get("Frequency", RAW_FREQUENCY)
+            payload = f"{frequency},{raw}"
+            if len(payload) > MAX_CODE_BYTES:
+                raise CodeTooLargeError(
+                    f"the raw code is {len(payload)} bytes, above the "
+                    f"{MAX_CODE_BYTES} the board accepts in one message"
+                )
+            if channel not in (None, 1):
+                _LOGGER.warning(
+                    "Sending a raw code on emitter 1 instead of %s: the "
+                    "firmware's raw form takes no channel",
+                    channel,
+                )
+            await self.async_send_raw(CMND_IRSEND, payload)
+            return
+
+        await self.async_send_json(CMND_IRSEND, code, channel=channel)
+
     async def async_probe_channels(self) -> tuple[int, bool]:
         """Ask the board how many emitters it has and whether it can receive.
 
@@ -332,6 +370,17 @@ class TasmotaIrCoordinator:
         )
 
 
+def is_hvac_frame(received: dict[str, Any]) -> bool:
+    """Whether this capture is an air conditioner.
+
+    Those do not belong in the generic store. The frame carries the whole state
+    of the unit, so one capture is one temperature in one mode, and replaying it
+    is nothing like having the remote. The climate platform builds the frame
+    from vendor and model instead, which is both smaller and complete.
+    """
+    return KEY_IRHVAC in received
+
+
 def is_usable_code(received: dict[str, Any]) -> bool:
     """Whether a capture carries enough to be replayed.
 
@@ -354,7 +403,11 @@ def extract_code(received: dict[str, Any]) -> dict[str, Any]:
     bits = received.get("Bits")
     if protocol and protocol != "UNKNOWN" and data not in (None, "", "0x") and bits:
         return {"Protocol": protocol, "Bits": bits, "Data": data}
-    return {"Protocol": "RAW", "RawData": received.get("RawData")}
+    return {
+        "Protocol": PROTOCOL_RAW,
+        "RawData": received.get("RawData"),
+        "Frequency": RAW_FREQUENCY,
+    }
 
 
 def count_ir_gpios(gpio_reply: dict[str, Any]) -> tuple[int, bool]:
