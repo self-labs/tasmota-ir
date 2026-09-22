@@ -9,6 +9,20 @@ about compatibility, only when it was published.
 
 ## [Unreleased]
 
+## [2026.9.8] - 2026-09-22
+
+### Added
+
+- A test built from a capture taken on the bench: two frames the library could not finish reading, then the real LG frame.
+
+### Changed
+
+- **The failure screen of the air conditioner says what is ignored** while it waits: anything that is not an air conditioner frame, broken frames included.
+
+### Fixed
+
+- **Reading an air conditioner remote ended on whatever the receiver heard first.** Pressing the remote of an LG produced bursts of frames decoded as `UNKNOWN`, and only then the real `LG2` ones. The wait took the first usable frame, which was one of those, and the flow reported that it had heard no air conditioner. It now waits for an air conditioner frame, or for the window to close.
+
 ## [2026.9.7] - 2026-09-22
 
 ### Added
@@ -111,7 +125,8 @@ about compatibility, only when it was published.
 - **Partial captures are discarded at capture time.** A truncated frame arrives with `Data` of `"0x"` and `Bits` of `0`, and storing one produces a command that is accepted, listed and reproduces nothing.
 - **Entities attach to the board's existing device.** The device info declares `connections={(CONNECTION_NETWORK_MAC, mac)}`, which is what the Tasmota integration uses, so the IR entities sit next to the board's diagnostics instead of forming a second device for the same hardware.
 
-[Unreleased]: https://github.com/self-labs/tasmota-ir/compare/v2026.9.7...HEAD
+[Unreleased]: https://github.com/self-labs/tasmota-ir/compare/v2026.9.8...HEAD
+[2026.9.8]: https://github.com/self-labs/tasmota-ir/compare/v2026.9.7...v2026.9.8
 [2026.9.7]: https://github.com/self-labs/tasmota-ir/compare/v2026.9.6...v2026.9.7
 [2026.9.6]: https://github.com/self-labs/tasmota-ir/compare/v2026.9.5...v2026.9.6
 [2026.9.5]: https://github.com/self-labs/tasmota-ir/compare/v2026.9.4...v2026.9.5

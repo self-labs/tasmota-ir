@@ -93,7 +93,10 @@ class TasmotaIrCoordinator:
         )
         self._codes: dict[str, dict[str, Any]] = {}
         self._unsubscribes: list[Callable[[], None]] = []
-        self._ir_waiters: list[asyncio.Future[dict[str, Any]]] = []
+        # Each waiter is a future plus what it is waiting for, if anything.
+        self._ir_waiters: list[
+            tuple[asyncio.Future[dict[str, Any]], Callable[[dict[str, Any]], bool] | None]
+        ] = []
 
     # ------------------------------------------------------------------
     # Topics
@@ -147,7 +150,7 @@ class TasmotaIrCoordinator:
         for unsubscribe in self._unsubscribes:
             unsubscribe()
         self._unsubscribes.clear()
-        for waiter in self._ir_waiters:
+        for waiter, _wanted in self._ir_waiters:
             if not waiter.done():
                 waiter.cancel()
         self._ir_waiters.clear()
@@ -194,9 +197,10 @@ class TasmotaIrCoordinator:
             _LOGGER.debug("Discarding a partial IR capture: %s", received)
             return
 
-        for waiter in list(self._ir_waiters):
-            if not waiter.done():
-                waiter.set_result(received)
+        for waiter, wanted in list(self._ir_waiters):
+            if waiter.done() or (wanted is not None and not wanted(received)):
+                continue
+            waiter.set_result(received)
 
         async_dispatcher_send(
             self.hass,
@@ -204,18 +208,30 @@ class TasmotaIrCoordinator:
             received,
         )
 
-    async def async_wait_for_code(self, timeout: float) -> dict[str, Any] | None:
-        """Wait for the next usable code the receiver reports."""
+    async def async_wait_for_code(
+        self,
+        timeout: float,
+        wanted: Callable[[dict[str, Any]], bool] | None = None,
+    ) -> dict[str, Any] | None:
+        """Wait for a code the receiver reports, optionally a kind of code.
+
+        A receiver hears more than the key that was pressed: a frame read at a
+        bad angle decodes into something the library does not recognise, and
+        those arrive in bursts. Waiting for an air conditioner while a stray
+        frame is in the air would end on the stray one, which is why the
+        air conditioner flow says what it is waiting for.
+        """
         waiter: asyncio.Future[dict[str, Any]] = self.hass.loop.create_future()
-        self._ir_waiters.append(waiter)
+        entry = (waiter, wanted)
+        self._ir_waiters.append(entry)
         try:
             async with asyncio.timeout(timeout):
                 return await waiter
         except TimeoutError:
             return None
         finally:
-            if waiter in self._ir_waiters:
-                self._ir_waiters.remove(waiter)
+            if entry in self._ir_waiters:
+                self._ir_waiters.remove(entry)
 
     # ------------------------------------------------------------------
     # Outgoing MQTT

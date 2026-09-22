@@ -170,7 +170,7 @@
         },
         "read_failed": {
           "title": "Nenhum quadro de ar-condicionado",
-          "description": "Aperte uma tecla do controle de {name}, apontado para o receptor, uma tecla de cada vez. Controle que não é de ar-condicionado não funciona aqui: cadastre esses em Adicionar aparelho.",
+          "description": "Aperte uma tecla do controle de {name}, apontado para o receptor, uma tecla de cada vez. Enquanto a janela está aberta, tudo que não é quadro de ar-condicionado é ignorado, inclusive quadro quebrado, então nada mais encerra a espera. Controle que não é de ar-condicionado não funciona aqui: cadastre esses em Adicionar aparelho.",
           "submit": "Tentar de novo"
         },
         "reconfigure": {

@@ -16,6 +16,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+from collections.abc import Callable
 from typing import Any
 from uuid import uuid4
 
@@ -287,11 +288,14 @@ class _TasmotaIrSubentryFlow(ConfigSubentryFlow):
     def _placeholders(self) -> dict[str, str]:
         return {"name": self._name}
 
+    # What this flow is waiting for. None takes the first usable frame.
+    wanted: Callable[[dict[str, Any]], bool] | None = None
+
     async def _async_wait_for_key(self) -> dict[str, Any] | None:
         coordinator = self._coordinator()
         if coordinator is None:
             return None
-        return await coordinator.async_wait_for_code(LEARN_TIMEOUT_UI)
+        return await coordinator.async_wait_for_code(LEARN_TIMEOUT_UI, self.wanted)
 
     def _progress(self, step_id: str) -> SubentryFlowResult | None:
         """Show the waiting screen until a key arrives; None once it has."""
@@ -583,6 +587,8 @@ class ApplianceSubentryFlow(_TasmotaIrSubentryFlow):
 class ClimateSubentryFlow(_TasmotaIrSubentryFlow):
     """An air conditioner: read the vendor from its remote, build every frame."""
 
+    wanted = staticmethod(is_hvac_frame)
+
     def __init__(self) -> None:
         """Nothing read yet."""
         super().__init__()
@@ -630,7 +636,7 @@ class ClimateSubentryFlow(_TasmotaIrSubentryFlow):
         if (progress := self._progress("read_remote")) is not None:
             return progress
         received = self._received
-        if received is None or not isinstance(received.get(KEY_IRHVAC), dict):
+        if received is None:
             return self.async_show_progress_done(next_step_id="read_failed")
         self._hvac = received[KEY_IRHVAC]
         return self.async_show_progress_done(next_step_id="read_done")

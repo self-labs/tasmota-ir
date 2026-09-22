@@ -29,6 +29,44 @@ async def _add_ac(hass: HomeAssistant, entry) -> None:
     await hass.async_block_till_done()
 
 
+async def test_noise_does_not_end_the_wait(hass: HomeAssistant, mqtt_mock) -> None:
+    """Captured live: broken frames arrive in bursts while the remote is pressed.
+
+    Waiting for the first usable frame ended on one of those and the flow said
+    it had heard no air conditioner. It now waits for an air conditioner frame.
+    """
+    entry = await setup_board(hass, board_entry())
+    manager = hass.config_entries.subentries
+    result = await manager.async_init(
+        (entry.entry_id, "climate"), context={"source": SOURCE_USER}
+    )
+    result = await manager.async_configure(
+        result["flow_id"], {"name": "Ar Escritorio", "channel": 4}
+    )
+    assert result["type"] is FlowResultType.SHOW_PROGRESS
+
+    # No block_till_done in between: it would wait out the whole window.
+    for hash_ in ("0x02D08B0F", "0x9A79395A"):
+        receive(
+            hass,
+            {
+                "Protocol": "UNKNOWN",
+                "Bits": 30,
+                "Hash": hash_,
+                "Repeat": 0,
+                "RawData": "+3140-9625+475-1580+465-530",
+            },
+        )
+    receive(hass, LG_AC_FRAME)
+    await hass.async_block_till_done()
+
+    result = await manager.async_configure(result["flow_id"])
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    await hass.async_block_till_done()
+    (subentry,) = entry.subentries.values()
+    assert subentry.data["vendor"] == "LG2"
+
+
 async def test_the_remote_names_the_unit(hass: HomeAssistant, mqtt_mock) -> None:
     """Vendor and model come from the frame, and the vane is offered."""
     entry = await setup_board(hass, board_entry())

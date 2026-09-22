@@ -170,7 +170,7 @@
         },
         "read_failed": {
           "title": "No air conditioner frame",
-          "description": "Press one key of the remote of {name}, pointed at the receiver, one key at a time. A remote that is not an air conditioner does not work here: add those with Add appliance.",
+          "description": "Press one key of the remote of {name}, pointed at the receiver, one key at a time. Anything that is not an air conditioner frame is ignored while the window is open, broken frames included, so nothing else can end the wait. A remote that is not an air conditioner does not work here: add those with Add appliance.",
           "submit": "Try again"
         },
         "reconfigure": {
