@@ -72,19 +72,86 @@ async def test_the_vane_is_sent_with_the_frame(hass: HomeAssistant, mqtt_mock) -
 async def test_the_physical_remote_moves_the_card(
     hass: HomeAssistant, mqtt_mock
 ) -> None:
-    """A frame heard from the remote updates mode, temperature and vane."""
+    """A frame heard from the remote updates mode and temperature."""
     entry = await setup_board(hass, board_entry())
     await _add_ac(hass, entry)
 
     frame = json.loads(json.dumps(LG_AC_FRAME))
-    frame["IRHVAC"].update({"Temp": 19, "SwingV": "Highest", "Mode": "Dry"})
+    frame["IRHVAC"].update({"Temp": 19, "Mode": "Dry"})
     receive(hass, frame)
     await hass.async_block_till_done()
 
     state = hass.states.get("climate.ar_escritorio")
     assert state.state == "dry"
     assert state.attributes["temperature"] == 19
-    assert state.attributes["swing_mode"] == "highest"
+
+
+async def test_an_lg_vane_key_moves_only_the_vane(
+    hass: HomeAssistant, mqtt_mock
+) -> None:
+    """Captured live: a vane key decodes with Mode Auto and Temp 15 filled in.
+
+    Those two are firmware defaults, not the unit's state, and taking them
+    would throw the card to 15 degrees every time the vane moved.
+    """
+    entry = await setup_board(hass, board_entry())
+    await _add_ac(hass, entry)
+    receive(hass, LG_AC_FRAME)
+    await hass.async_block_till_done()
+
+    receive(
+        hass,
+        {
+            "Protocol": "LG2",
+            "Bits": 28,
+            "Data": "0x881308C",
+            "DataLSB": "0x10810C31",
+            "Repeat": 0,
+            "IRHVAC": {
+                "Vendor": "LG2",
+                "Model": "AKB74955603",
+                "Command": "Control",
+                "Mode": "Auto",
+                "Power": "On",
+                "Celsius": "On",
+                "Temp": 15,
+                "FanSpeed": "Auto",
+                "SwingV": "High",
+                "SwingH": "Off",
+                "Light": "On",
+            },
+        },
+    )
+    await hass.async_block_till_done()
+
+    state = hass.states.get("climate.ar_escritorio")
+    assert state.state == "cool"
+    assert state.attributes["temperature"] == 23
+    assert state.attributes["fan_mode"] == "medium"
+    assert state.attributes["swing_mode"] == "high"
+
+
+async def test_an_off_frame_keeps_the_setpoint(hass: HomeAssistant, mqtt_mock) -> None:
+    """LG turns off with a fixed code; its temperature means nothing."""
+    entry = await setup_board(hass, board_entry())
+    await _add_ac(hass, entry)
+    receive(hass, LG_AC_FRAME)
+    await hass.async_block_till_done()
+
+    receive(
+        hass,
+        {
+            "Protocol": "LG2",
+            "Bits": 28,
+            "Data": "0x88C0051",
+            "IRHVAC": {"Vendor": "LG2", "Power": "Off", "Mode": "Auto", "Temp": 15},
+        },
+    )
+    await hass.async_block_till_done()
+
+    state = hass.states.get("climate.ar_escritorio")
+    assert state.state == "off"
+    assert state.attributes["temperature"] == 23
 
 
 async def test_settings_change_the_model_and_the_modes(

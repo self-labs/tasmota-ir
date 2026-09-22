@@ -72,10 +72,20 @@ SWING_TOGGLE_VENDORS: Final = frozenset(
 )
 
 
-
 def swing_vertical_default(vendor: str) -> bool:
     """Whether the vertical vane is offered unless the user says otherwise."""
     return vendor.upper() not in SWING_TOGGLE_VENDORS
+
+
+# LG sends some keys as frames of their own that carry no state at all: the
+# vane, the horizontal vane and the display toggle. The firmware still decodes
+# them into a full IRHVAC, filling mode, temperature and fan with defaults (seen
+# live: Mode Auto, Temp 15 on every vane key). Reading those back would throw the
+# card to 15 degrees whenever somebody moved the vane with the remote.
+LG_VENDORS: Final = frozenset({"LG", "LG2"})
+LG_VANE_PREFIX: Final = "0X8813"
+LG_VANE_TOGGLE: Final = "0X8810001"
+LG_DISPLAY_TOGGLE: Final = "0X88C00A6"
 
 
 # The same, for the display light. Sending "Light" to these would flip the

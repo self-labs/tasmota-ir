@@ -62,7 +62,7 @@
         },
         "learn": {
           "title": "Aprender comando",
-          "description": "Como a tecla se chama? Dê um nome curto, como power ou volume mais. Depois de continuar, aponte o controle para a placa e aperte essa tecla uma vez.",
+          "description": "Como a tecla se chama? Dê um nome curto, como power ou volume mais. Depois de continuar, aponte o controle para a placa e aperte essa tecla uma vez. Pode segurar a tecla; o que não pode é apertar duas teclas diferentes seguidas.",
           "data": {
             "command": "Comando"
           },
@@ -71,7 +71,7 @@
           }
         },
         "learn_wait": {
-          "title": "Esperando {command}"
+          "title": "Esperando a tecla"
         },
         "learned": {
           "title": "{command} aprendido",
@@ -131,7 +131,7 @@
         }
       },
       "progress": {
-        "wait_for_key": "Aponte o controle de {name} para a placa e aperte {command} uma vez. Pode segurar a tecla; o que não pode é apertar duas teclas diferentes seguidas. Esperando até 30 segundos."
+        "wait_for_key": "Aponte o controle de {name} para a placa e aperte {command} uma vez.\n\nEsperando até 30 segundos."
       },
       "error": {
         "name_empty": "Dê um nome.",
@@ -156,7 +156,7 @@
       "step": {
         "user": {
           "title": "Adicionar ar-condicionado",
-          "description": "Aqui nada se aprende tecla por tecla. O firmware conhece o protocolo de dezenas de fabricantes e monta cada comando a partir de modo, temperatura, ventilador e paleta. No próximo passo ele lê o fabricante e o modelo do próprio controle do aparelho.",
+          "description": "Aqui nada se aprende tecla por tecla. O firmware conhece o protocolo de dezenas de fabricantes e monta cada comando a partir de modo, temperatura, ventilador e paleta. No próximo passo você aperta qualquer tecla do controle do aparelho, e o firmware lê dele o fabricante e o modelo, sem nada para procurar em manual.",
           "data": {
             "name": "Nome",
             "channel": "Emissor"
@@ -166,7 +166,7 @@
           }
         },
         "read_remote": {
-          "title": "Lendo o controle de {name}"
+          "title": "Lendo o controle"
         },
         "read_failed": {
           "title": "Nenhum quadro de ar-condicionado",
@@ -195,7 +195,7 @@
             "swing_horizontal": "Paleta horizontal"
           },
           "data_description": {
-            "model": "Alguns fabricantes têm vários controles que o decodificador não distingue, e o modelo decide o que o firmware manda. Se a paleta não responder, troque o modelo aqui. No LG, o AKB74955603 é o que manda a paleta.",
+            "model": "Alguns fabricantes têm vários controles que o decodificador não distingue, e o modelo decide o que o firmware manda. Se a paleta não responder, troque o modelo aqui. No LG, o AKB74955603 é o que manda a paleta; Ler o controle de novo, apertando a tecla da paleta, escolhe esse sozinho.",
             "hvac_modes": "Só os modos que o seu aparelho tem de verdade. Desligado está sempre lá.",
             "swing_vertical": "Mostra as posições da paleta no card. Vem desligado nos fabricantes em que a paleta é um liga e desliga, porque ali cada comando a inverteria.",
             "swing_horizontal": "Só para aparelhos com paleta horizontal comandada pelo controle."
@@ -217,7 +217,7 @@
         }
       },
       "progress": {
-        "wait_for_key": "Aponte o controle de {name} para a placa e aperte qualquer tecla. O firmware decodifica o quadro inteiro, fabricante e modelo inclusos, então não há nada para procurar em manual. Esperando até 30 segundos."
+        "wait_for_key": "Aponte o controle de {name} para a placa e aperte qualquer tecla.\n\nEsperando até 30 segundos."
       },
       "error": {
         "name_empty": "Dê um nome.",

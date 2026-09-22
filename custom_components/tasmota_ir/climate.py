@@ -44,6 +44,10 @@ from .const import (
     DEFAULT_MAX_TEMP,
     DEFAULT_MIN_TEMP,
     KEY_IRHVAC,
+    LG_DISPLAY_TOGGLE,
+    LG_VANE_PREFIX,
+    LG_VANE_TOGGLE,
+    LG_VENDORS,
     LIGHT_TOGGLE_VENDORS,
     SIGNAL_IR_RECEIVED,
     SUBENTRY_CLIMATE,
@@ -101,9 +105,7 @@ SWING_H_TO_TASMOTA: dict[str, str] = {
     "right_max": "RightMax",
     "wide": "Wide",
 }
-TASMOTA_TO_SWING_H = {
-    value.lower(): key for key, value in SWING_H_TO_TASMOTA.items()
-}
+TASMOTA_TO_SWING_H = {value.lower(): key for key, value in SWING_H_TO_TASMOTA.items()}
 
 
 async def async_setup_entry(
@@ -142,7 +144,9 @@ class TasmotaIrClimate(TasmotaIrEntity, ClimateEntity, RestoreEntity):
         self._attr_min_temp = float(data.get(CONF_MIN_TEMP, DEFAULT_MIN_TEMP))
         self._attr_max_temp = float(data.get(CONF_MAX_TEMP, DEFAULT_MAX_TEMP))
 
-        modes = [m for m in data.get(CONF_HVAC_MODES, ALL_HVAC_MODES) if m in ALL_HVAC_MODES]
+        modes = [
+            m for m in data.get(CONF_HVAC_MODES, ALL_HVAC_MODES) if m in ALL_HVAC_MODES
+        ]
         if HVACMode.OFF not in modes:
             modes.insert(0, HVACMode.OFF)
         self._attr_hvac_modes = [HVACMode(mode) for mode in modes]
@@ -220,18 +224,31 @@ class TasmotaIrClimate(TasmotaIrEntity, ClimateEntity, RestoreEntity):
         if self._vendor and hvac.get("Vendor") != self._vendor:
             return
 
+        data = str(received.get("Data", "")).upper()
+        is_lg = str(hvac.get("Vendor", "")).upper() in LG_VENDORS
+        if is_lg and data == LG_DISPLAY_TOGGLE:
+            return
+        if is_lg and (data.startswith(LG_VANE_PREFIX) or data == LG_VANE_TOGGLE):
+            # A vane key: only the vane is real, the rest are defaults.
+            if self._read_swing(hvac):
+                self.async_write_ha_state()
+            return
+
         changed = False
 
         power = str(hvac.get("Power", "")).lower()
         mode = str(hvac.get("Mode", "")).lower()
         if power == "off":
-            new_mode = HVACMode.OFF
-        else:
-            new_mode = TASMOTA_TO_HVAC.get(mode, self._last_on_mode)
+            # An off frame says the unit is off and nothing else reliable: LG
+            # sends a fixed code for it. Keep the setpoint for the next on.
+            if self._attr_hvac_mode != HVACMode.OFF:
+                self._attr_hvac_mode = HVACMode.OFF
+                self.async_write_ha_state()
+            return
+        new_mode = TASMOTA_TO_HVAC.get(mode, self._last_on_mode)
         if new_mode in self._attr_hvac_modes and new_mode != self._attr_hvac_mode:
             self._attr_hvac_mode = new_mode
-            if new_mode != HVACMode.OFF:
-                self._last_on_mode = new_mode
+            self._last_on_mode = new_mode
             changed = True
 
         if (temp := hvac.get("Temp")) is not None:
@@ -248,6 +265,17 @@ class TasmotaIrClimate(TasmotaIrEntity, ClimateEntity, RestoreEntity):
             self._attr_fan_mode = fan
             changed = True
 
+        # An LG main frame never carries the vane, that goes in a frame of its
+        # own, so its SwingV is only the firmware default.
+        if not is_lg and self._read_swing(hvac):
+            changed = True
+
+        if changed:
+            self.async_write_ha_state()
+
+    def _read_swing(self, hvac: dict[str, Any]) -> bool:
+        """Take the vane positions from a frame. Returns whether they changed."""
+        changed = False
         if self._swing_vertical:
             swing = TASMOTA_TO_SWING.get(str(hvac.get("SwingV", "")).lower())
             if swing and swing != self._attr_swing_mode:
@@ -258,9 +286,7 @@ class TasmotaIrClimate(TasmotaIrEntity, ClimateEntity, RestoreEntity):
             if swing_h and swing_h != self._attr_swing_horizontal_mode:
                 self._attr_swing_horizontal_mode = swing_h
                 changed = True
-
-        if changed:
-            self.async_write_ha_state()
+        return changed
 
     async def async_set_hvac_mode(self, hvac_mode: HVACMode) -> None:
         """Change the mode, and remember it for the next turn on."""
@@ -329,7 +355,9 @@ class TasmotaIrClimate(TasmotaIrEntity, ClimateEntity, RestoreEntity):
         # Left out entirely when the vane is not offered: an absent key keeps
         # the firmware's default instead of forcing a position on the unit.
         if self._swing_vertical:
-            payload["SwingV"] = SWING_TO_TASMOTA.get(self._attr_swing_mode or "off", "Off")
+            payload["SwingV"] = SWING_TO_TASMOTA.get(
+                self._attr_swing_mode or "off", "Off"
+            )
         if self._swing_horizontal:
             payload["SwingH"] = SWING_H_TO_TASMOTA.get(
                 self._attr_swing_horizontal_mode or "off", "Off"

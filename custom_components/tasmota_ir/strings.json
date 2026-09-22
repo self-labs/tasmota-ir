@@ -62,7 +62,7 @@
         },
         "learn": {
           "title": "Learn a command",
-          "description": "What is the key called? Give it a short name, such as power or volume up. After you continue, point the remote at the board and press that key once.",
+          "description": "What is the key called? Give it a short name, such as power or volume up. After you continue, point the remote at the board and press that key once. Holding it is fine; two different keys in a row are not.",
           "data": {
             "command": "Command"
           },
@@ -71,7 +71,7 @@
           }
         },
         "learn_wait": {
-          "title": "Waiting for {command}"
+          "title": "Waiting for the key"
         },
         "learned": {
           "title": "{command} learned",
@@ -131,7 +131,7 @@
         }
       },
       "progress": {
-        "wait_for_key": "Point the remote of {name} at the board and press {command} once. Holding it is fine; two different keys in a row are not. Waiting up to 30 seconds."
+        "wait_for_key": "Point the remote of {name} at the board and press {command} once.\n\nWaiting up to 30 seconds."
       },
       "error": {
         "name_empty": "Give it a name.",
@@ -156,7 +156,7 @@
       "step": {
         "user": {
           "title": "Add air conditioner",
-          "description": "Nothing is learned key by key here. The firmware knows the protocol of dozens of vendors and builds every command from mode, temperature, fan and vane. In the next step it reads the vendor and the model from the unit's own remote.",
+          "description": "Nothing is learned key by key here. The firmware knows the protocol of dozens of vendors and builds every command from mode, temperature, fan and vane. In the next step you press any key of the unit's own remote, and the firmware reads the vendor and the model from it, so there is nothing to look up in a manual.",
           "data": {
             "name": "Name",
             "channel": "Emitter"
@@ -166,7 +166,7 @@
           }
         },
         "read_remote": {
-          "title": "Reading the remote of {name}"
+          "title": "Reading the remote"
         },
         "read_failed": {
           "title": "No air conditioner frame",
@@ -195,7 +195,7 @@
             "swing_horizontal": "Horizontal vane"
           },
           "data_description": {
-            "model": "Some vendors make several remotes that look alike to the decoder, and the model decides what the firmware sends. If the vane does not respond, try another model here. For LG, AKB74955603 is the one that sends the vane.",
+            "model": "Some vendors make several remotes that look alike to the decoder, and the model decides what the firmware sends. If the vane does not respond, try another model here. For LG, AKB74955603 is the one that sends the vane; Read the remote again, pressing the vane key, sets it by itself.",
             "hvac_modes": "Only the modes your unit really has. Off is always there.",
             "swing_vertical": "Offer the vane positions on the card. Off by default for vendors where the vane is a toggle, because there every command would flip it.",
             "swing_horizontal": "Only for units with a horizontal vane that the remote controls."
@@ -217,7 +217,7 @@
         }
       },
       "progress": {
-        "wait_for_key": "Point the remote of {name} at the board and press any key. The firmware decodes the whole frame, vendor and model included, so there is nothing to look up in a manual. Waiting up to 30 seconds."
+        "wait_for_key": "Point the remote of {name} at the board and press any key.\n\nWaiting up to 30 seconds."
       },
       "error": {
         "name_empty": "Give it a name.",

@@ -9,6 +9,23 @@ about compatibility, only when it was published.
 
 ## [Unreleased]
 
+## [2026.9.7] - 2026-09-22
+
+### Added
+
+- **Tests for the strings, rendered the way the frontend renders them**: no quoted placeholder anywhere, no placeholder in the title of a waiting screen, English identical to `strings.json`, and Portuguese with every key. Both bugs fixed below would have failed them. Also tests for the LG vane and off frames, captured from a real remote. 29 tests in all.
+
+### Changed
+
+- **Shorter waiting screens.** The frontend centres the text of a waiting screen, so the explanation moved to the step before it, and the screen itself only says what to press and how long it waits.
+- **The model hint in the air conditioner settings** says that **Read the remote again**, pressing the vane key, sets the LG model that sends the vane by itself.
+
+### Fixed
+
+- **Adding an air conditioner showed a translation error as the title**, `[formatjs Error: MISSING_VALUE] The intl string context variable "name" was not provided`. The frontend renders the title of a waiting screen with no placeholders at all, and the title had `{name}`. Waiting screen titles no longer carry placeholders.
+- **An LG vane key on the physical remote threw the card to Auto at 15 degrees.** LG sends the vane, the horizontal vane and the display toggle as frames of their own, and the firmware still decodes them into a full `IRHVAC`, with `Mode Auto` and `Temp 15` filled in as defaults. Those frames now move only the vane, and the display toggle is ignored. The other way round too: an LG main frame never carries the vane, so its `SwingV` default no longer resets the vane on the card.
+- **An off frame from the physical remote overwrote the setpoint.** LG turns off with a fixed code whose temperature means nothing. The card now goes off and keeps the setpoint for the next time it is turned on.
+
 ## [2026.9.6] - 2026-09-22
 
 ### Added
@@ -94,7 +111,8 @@ about compatibility, only when it was published.
 - **Partial captures are discarded at capture time.** A truncated frame arrives with `Data` of `"0x"` and `Bits` of `0`, and storing one produces a command that is accepted, listed and reproduces nothing.
 - **Entities attach to the board's existing device.** The device info declares `connections={(CONNECTION_NETWORK_MAC, mac)}`, which is what the Tasmota integration uses, so the IR entities sit next to the board's diagnostics instead of forming a second device for the same hardware.
 
-[Unreleased]: https://github.com/self-labs/tasmota-ir/compare/v2026.9.6...HEAD
+[Unreleased]: https://github.com/self-labs/tasmota-ir/compare/v2026.9.7...HEAD
+[2026.9.7]: https://github.com/self-labs/tasmota-ir/compare/v2026.9.6...v2026.9.7
 [2026.9.6]: https://github.com/self-labs/tasmota-ir/compare/v2026.9.5...v2026.9.6
 [2026.9.5]: https://github.com/self-labs/tasmota-ir/compare/v2026.9.4...v2026.9.5
 [2026.9.4]: https://github.com/self-labs/tasmota-ir/compare/v2026.9.3...v2026.9.4

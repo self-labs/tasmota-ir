@@ -200,8 +200,11 @@ does not turn it on.
   `TRANSCOLD`, `MIDEA`, `CORONA_AC`, `HITACHI_AC344`, `HITACHI_AC424`,
   `SHARP_AC`, `KELON`), because there every command would flip it.
 
-**Read the remote again** re-reads vendor and model from the remote, for a unit
-that was added with the wrong remote in hand.
+**Read the remote again** re-reads vendor and model from the remote. For an LG,
+run it and press the **vane key**: that key is a frame of its own, and the
+decoder reads it as `AKB74955603`, which is the model that sends the vane. On
+the remote tested here, every vane position arrived as `0x8813...` decoded that
+way, while the power and temperature keys decode as `AKB75215403`.
 
 ## Automating on a key press
 
@@ -231,6 +234,8 @@ appliance name: `Hubb IR1 TV Quarto power` becomes `TV Quarto power`.
 - **The card follows the physical remote only when the frame arrives whole.** A
   key pressed from across the room can decode as something else, and then there
   is nothing to follow.
+- **LG defines six vane positions and the firmware maps them onto five.** The
+  one between middle and high (`0x881307B`) arrives as middle, and cannot be sent.
 - **One previous state per board.** The firmware remembers a single last frame
   for the whole board, and toggle-based vendors decide what to flip from it. Two
   air conditioners of such a vendor on the same board can confuse each other.
@@ -247,7 +252,7 @@ appliance name: `Hubb IR1 TV Quarto power` becomes `TV Quarto power`.
   the climate entity, each change confirmed by the unit's own Wi-Fi reporting
   about a second later.
 - Athom IR Remote, ESP32, one emitter.
-- The test suite, against Home Assistant 2026.9.3: `pip install -r
+- The test suite, 29 tests against Home Assistant 2026.9.3: `pip install -r
   requirements_test.txt`, then `pytest`.
 
 Any Tasmota board with an `IRsend` GPIO should work. If yours does not, open an
