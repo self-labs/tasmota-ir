@@ -2,12 +2,14 @@
 
 Every other appliance needs a code per button. An air conditioner does not:
 Tasmota's full IR driver knows the protocol of dozens of vendors and assembles
-the whole frame from vendor, mode, temperature and fan speed. That is one
-command instead of one stored code per temperature.
+the whole frame from vendor, mode, temperature, fan speed and vane position.
+That is one command instead of one stored code per temperature.
 
 It also reads the state back. The entity follows what the **physical remote**
 does, not only what Home Assistant asked for, because the board reports every
-frame its receiver hears, including the ones it did not send.
+frame its receiver hears, including the ones it did not send. That only works
+for frames that arrive whole: one pressed from across the room can decode as
+something else, and then there is nothing to follow.
 """
 
 from __future__ import annotations
@@ -30,24 +32,31 @@ from homeassistant.helpers.restore_state import RestoreEntity
 
 from .const import (
     CMND_IRHVAC,
-    CONF_APPLIANCES,
-    CONF_KIND,
+    CONF_HVAC_MODES,
+    CONF_INITIAL_SWING_VERTICAL,
+    CONF_LIGHT,
     CONF_MAX_TEMP,
     CONF_MIN_TEMP,
     CONF_MODEL,
+    CONF_SWING_HORIZONTAL,
+    CONF_SWING_VERTICAL,
     CONF_VENDOR,
+    DEFAULT_MAX_TEMP,
+    DEFAULT_MIN_TEMP,
     KEY_IRHVAC,
-    KIND_CLIMATE,
+    LIGHT_TOGGLE_VENDORS,
     SIGNAL_IR_RECEIVED,
+    SUBENTRY_CLIMATE,
+    swing_vertical_default,
 )
-from .coordinator import CodeTooLargeError, TasmotaIrCoordinator
+from .coordinator import Appliance, CodeTooLargeError, TasmotaIrCoordinator
 from .entity import TasmotaIrEntity
 
 _LOGGER = logging.getLogger(__name__)
 
-# Tasmota speaks its own vocabulary for modes and fan speeds. These two tables
-# are the whole translation layer, and they are deliberately small: anything the
-# vendor does not support is simply never offered by the config flow.
+# Tasmota speaks its own vocabulary for modes, fan speeds and vanes. These
+# tables are the whole translation layer. The names on the Home Assistant side
+# are translated in strings.json, under the air_conditioner translation key.
 HVAC_TO_TASMOTA: dict[HVACMode, str] = {
     HVACMode.OFF: "Off",
     HVACMode.COOL: "Cool",
@@ -57,6 +66,7 @@ HVAC_TO_TASMOTA: dict[HVACMode, str] = {
     HVACMode.AUTO: "Auto",
 }
 TASMOTA_TO_HVAC = {value.lower(): key for key, value in HVAC_TO_TASMOTA.items()}
+ALL_HVAC_MODES: list[str] = [str(mode) for mode in HVAC_TO_TASMOTA]
 
 FAN_TO_TASMOTA: dict[str, str] = {
     "auto": "Auto",
@@ -68,8 +78,32 @@ FAN_TO_TASMOTA: dict[str, str] = {
 }
 TASMOTA_TO_FAN = {value.lower(): key for key, value in FAN_TO_TASMOTA.items()}
 
-DEFAULT_MIN_TEMP = 18
-DEFAULT_MAX_TEMP = 30
+# stdAc::swingv_t, the vertical vane. "auto" is the vane moving on its own.
+SWING_TO_TASMOTA: dict[str, str] = {
+    "off": "Off",
+    "auto": "Auto",
+    "highest": "Highest",
+    "high": "High",
+    "middle": "Middle",
+    "low": "Low",
+    "lowest": "Lowest",
+}
+TASMOTA_TO_SWING = {value.lower(): key for key, value in SWING_TO_TASMOTA.items()}
+
+# stdAc::swingh_t, the horizontal vane.
+SWING_H_TO_TASMOTA: dict[str, str] = {
+    "off": "Off",
+    "auto": "Auto",
+    "left_max": "LeftMax",
+    "left": "Left",
+    "middle": "Middle",
+    "right": "Right",
+    "right_max": "RightMax",
+    "wide": "Wide",
+}
+TASMOTA_TO_SWING_H = {
+    value.lower(): key for key, value in SWING_H_TO_TASMOTA.items()
+}
 
 
 async def async_setup_entry(
@@ -77,58 +111,73 @@ async def async_setup_entry(
     entry: ConfigEntry,
     async_add_entities: AddConfigEntryEntitiesCallback,
 ) -> None:
-    """Create one entity per appliance configured as an air conditioner."""
+    """Create one entity per air conditioner, each on its own subentry."""
     coordinator: TasmotaIrCoordinator = entry.runtime_data
-    entities = [
-        TasmotaIrClimate(coordinator, name, config)
-        for name, config in entry.options.get(CONF_APPLIANCES, {}).items()
-        if config.get(CONF_KIND) == KIND_CLIMATE
-    ]
-    async_add_entities(entities)
+    for appliance in coordinator.appliances.values():
+        if appliance.kind != SUBENTRY_CLIMATE:
+            continue
+        async_add_entities(
+            [TasmotaIrClimate(coordinator, appliance)],
+            config_subentry_id=appliance.subentry_id,
+        )
 
 
 class TasmotaIrClimate(TasmotaIrEntity, ClimateEntity, RestoreEntity):
     """One air conditioner driven by IRHVAC."""
 
+    _attr_name = None
+    _attr_translation_key = "air_conditioner"
     _attr_temperature_unit = UnitOfTemperature.CELSIUS
     _attr_target_temperature_step = 1
-    _attr_supported_features = (
-        ClimateEntityFeature.TARGET_TEMPERATURE
-        | ClimateEntityFeature.FAN_MODE
-        | ClimateEntityFeature.TURN_ON
-        | ClimateEntityFeature.TURN_OFF
-    )
 
-    def __init__(
-        self,
-        coordinator: TasmotaIrCoordinator,
-        appliance: str,
-        config: dict[str, Any],
-    ) -> None:
+    def __init__(self, coordinator: TasmotaIrCoordinator, appliance: Appliance) -> None:
         """Bind the entity to one appliance."""
-        super().__init__(coordinator)
-        self._appliance = appliance
-        self._vendor: str = config.get(CONF_VENDOR, "")
-        self._model: str = config.get(CONF_MODEL, "")
-        self._attr_unique_id = f"{coordinator.entry.entry_id}_climate_{appliance}"
-        self._attr_name = appliance
-        self._attr_min_temp = float(config.get(CONF_MIN_TEMP, DEFAULT_MIN_TEMP))
-        self._attr_max_temp = float(config.get(CONF_MAX_TEMP, DEFAULT_MAX_TEMP))
-        self._attr_hvac_modes = [
-            HVACMode.OFF,
-            HVACMode.COOL,
-            HVACMode.HEAT,
-            HVACMode.DRY,
-            HVACMode.FAN_ONLY,
-            HVACMode.AUTO,
-        ]
+        super().__init__(coordinator, appliance)
+        data = appliance.data
+        self._key = appliance.key
+        self._vendor: str = data.get(CONF_VENDOR, "")
+        self._model: str = data.get(CONF_MODEL, "")
+        self._light: str = data.get(CONF_LIGHT, "On")
+        self._attr_unique_id = f"{appliance.key}_climate"
+        self._attr_min_temp = float(data.get(CONF_MIN_TEMP, DEFAULT_MIN_TEMP))
+        self._attr_max_temp = float(data.get(CONF_MAX_TEMP, DEFAULT_MAX_TEMP))
+
+        modes = [m for m in data.get(CONF_HVAC_MODES, ALL_HVAC_MODES) if m in ALL_HVAC_MODES]
+        if HVACMode.OFF not in modes:
+            modes.insert(0, HVACMode.OFF)
+        self._attr_hvac_modes = [HVACMode(mode) for mode in modes]
         self._attr_fan_modes = list(FAN_TO_TASMOTA)
+
+        features = (
+            ClimateEntityFeature.TARGET_TEMPERATURE
+            | ClimateEntityFeature.FAN_MODE
+            | ClimateEntityFeature.TURN_ON
+            | ClimateEntityFeature.TURN_OFF
+        )
+        self._swing_vertical = bool(
+            data.get(CONF_SWING_VERTICAL, swing_vertical_default(self._vendor))
+        )
+        self._swing_horizontal = bool(data.get(CONF_SWING_HORIZONTAL, False))
+        if self._swing_vertical:
+            features |= ClimateEntityFeature.SWING_MODE
+            self._attr_swing_modes = list(SWING_TO_TASMOTA)
+        if self._swing_horizontal:
+            features |= ClimateEntityFeature.SWING_HORIZONTAL_MODE
+            self._attr_swing_horizontal_modes = list(SWING_H_TO_TASMOTA)
+        self._attr_supported_features = features
+
         self._attr_hvac_mode = HVACMode.OFF
         self._attr_fan_mode = "auto"
         self._attr_target_temperature = 24.0
+        self._attr_swing_mode = TASMOTA_TO_SWING.get(
+            str(data.get(CONF_INITIAL_SWING_VERTICAL, "Off")).lower(), "off"
+        )
+        self._attr_swing_horizontal_mode = "off"
         # The mode the unit was last on, so turning it back on returns to it
         # instead of guessing cool.
-        self._last_on_mode = HVACMode.COOL
+        self._last_on_mode = next(
+            (m for m in self._attr_hvac_modes if m != HVACMode.OFF), HVACMode.COOL
+        )
 
     async def async_added_to_hass(self) -> None:
         """Restore the last state and start listening to the receiver."""
@@ -143,6 +192,11 @@ class TasmotaIrClimate(TasmotaIrEntity, ClimateEntity, RestoreEntity):
                 self._attr_target_temperature = float(temp)
             if (fan := state.attributes.get("fan_mode")) in FAN_TO_TASMOTA:
                 self._attr_fan_mode = fan
+            if (swing := state.attributes.get("swing_mode")) in SWING_TO_TASMOTA:
+                self._attr_swing_mode = swing
+            swing_h = state.attributes.get("swing_horizontal_mode")
+            if swing_h in SWING_H_TO_TASMOTA:
+                self._attr_swing_horizontal_mode = swing_h
 
         self.async_on_remove(
             async_dispatcher_connect(
@@ -174,7 +228,7 @@ class TasmotaIrClimate(TasmotaIrEntity, ClimateEntity, RestoreEntity):
             new_mode = HVACMode.OFF
         else:
             new_mode = TASMOTA_TO_HVAC.get(mode, self._last_on_mode)
-        if new_mode != self._attr_hvac_mode:
+        if new_mode in self._attr_hvac_modes and new_mode != self._attr_hvac_mode:
             self._attr_hvac_mode = new_mode
             if new_mode != HVACMode.OFF:
                 self._last_on_mode = new_mode
@@ -193,6 +247,17 @@ class TasmotaIrClimate(TasmotaIrEntity, ClimateEntity, RestoreEntity):
         if fan and fan != self._attr_fan_mode:
             self._attr_fan_mode = fan
             changed = True
+
+        if self._swing_vertical:
+            swing = TASMOTA_TO_SWING.get(str(hvac.get("SwingV", "")).lower())
+            if swing and swing != self._attr_swing_mode:
+                self._attr_swing_mode = swing
+                changed = True
+        if self._swing_horizontal:
+            swing_h = TASMOTA_TO_SWING_H.get(str(hvac.get("SwingH", "")).lower())
+            if swing_h and swing_h != self._attr_swing_horizontal_mode:
+                self._attr_swing_horizontal_mode = swing_h
+                changed = True
 
         if changed:
             self.async_write_ha_state()
@@ -214,18 +279,22 @@ class TasmotaIrClimate(TasmotaIrEntity, ClimateEntity, RestoreEntity):
         if (temperature := kwargs.get(ATTR_TEMPERATURE)) is None:
             return
         self._attr_target_temperature = float(temperature)
-        if self._attr_hvac_mode == HVACMode.OFF:
-            self.async_write_ha_state()
-            return
-        await self._async_publish()
+        await self._async_publish_if_on()
 
     async def async_set_fan_mode(self, fan_mode: str) -> None:
         """Change the fan speed."""
         self._attr_fan_mode = fan_mode
-        if self._attr_hvac_mode == HVACMode.OFF:
-            self.async_write_ha_state()
-            return
-        await self._async_publish()
+        await self._async_publish_if_on()
+
+    async def async_set_swing_mode(self, swing_mode: str) -> None:
+        """Move the vertical vane, or set it swinging."""
+        self._attr_swing_mode = swing_mode
+        await self._async_publish_if_on()
+
+    async def async_set_swing_horizontal_mode(self, swing_horizontal_mode: str) -> None:
+        """Move the horizontal vane, or set it swinging."""
+        self._attr_swing_horizontal_mode = swing_horizontal_mode
+        await self._async_publish_if_on()
 
     async def async_turn_on(self) -> None:
         """Return to the mode the unit was last on."""
@@ -234,6 +303,13 @@ class TasmotaIrClimate(TasmotaIrEntity, ClimateEntity, RestoreEntity):
     async def async_turn_off(self) -> None:
         """Turn the unit off."""
         await self.async_set_hvac_mode(HVACMode.OFF)
+
+    async def _async_publish_if_on(self) -> None:
+        """Send only when the unit is on; otherwise just remember the choice."""
+        if self._attr_hvac_mode == HVACMode.OFF:
+            self.async_write_ha_state()
+            return
+        await self._async_publish()
 
     async def _async_publish(self) -> None:
         """Send the whole state as one IRHVAC frame."""
@@ -250,14 +326,37 @@ class TasmotaIrClimate(TasmotaIrEntity, ClimateEntity, RestoreEntity):
         }
         if self._model:
             payload["Model"] = self._model
+        # Left out entirely when the vane is not offered: an absent key keeps
+        # the firmware's default instead of forcing a position on the unit.
+        if self._swing_vertical:
+            payload["SwingV"] = SWING_TO_TASMOTA.get(self._attr_swing_mode or "off", "Off")
+        if self._swing_horizontal:
+            payload["SwingH"] = SWING_H_TO_TASMOTA.get(
+                self._attr_swing_horizontal_mode or "off", "Off"
+            )
+        # Some LG models send a separate "toggle the display" frame whenever
+        # Light is off, which is the firmware default. Saying what the remote
+        # said keeps the display as it was. Vendors where Light is itself a
+        # toggle get nothing, or every command would flip the display.
+        if self._vendor.upper() not in LIGHT_TOGGLE_VENDORS:
+            payload["Light"] = self._light
 
         try:
             await self.coordinator.async_send_json(
                 CMND_IRHVAC,
                 payload,
-                channel=self.coordinator.channel_for(self._appliance),
+                channel=self.coordinator.channel_for(self._key),
             )
         except CodeTooLargeError as err:  # pragma: no cover - frames are small
             raise HomeAssistantError(str(err)) from err
 
         self.async_write_ha_state()
+
+    @property
+    def extra_state_attributes(self) -> dict[str, Any]:
+        """What the firmware is told, so a wrong model is easy to spot."""
+        return {
+            "vendor": self._vendor,
+            "model": self._model,
+            "emitter": self.coordinator.channel_for(self._key),
+        }

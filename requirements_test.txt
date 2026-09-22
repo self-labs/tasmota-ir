@@ -1,0 +1,3 @@
+# The Home Assistant test harness. It pins the Home Assistant release it
+# tests against, so upgrading this line is upgrading the target.
+pytest-homeassistant-custom-component

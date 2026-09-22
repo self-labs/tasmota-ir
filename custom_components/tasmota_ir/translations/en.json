@@ -3,14 +3,14 @@
     "step": {
       "user": {
         "title": "Choose the board",
-        "description": "These are the Tasmota boards announcing themselves on your broker. Pick the one with the IR emitters.",
+        "description": "These are the Tasmota boards announcing themselves on your broker. Choose the one with the infrared emitters.",
         "data": {
           "board": "Board"
         }
       },
       "manual": {
         "title": "Enter the topic",
-        "description": "Use the value of Topic in the board's MQTT configuration. Leave FullTopic alone unless you changed it on the board.",
+        "description": "Use the Topic value from the board's MQTT settings. Leave FullTopic alone unless you changed it on the board.",
         "data": {
           "topic": "Topic",
           "full_topic": "FullTopic"
@@ -22,73 +22,262 @@
       "mqtt_unavailable": "MQTT is not available. Set up the MQTT integration first."
     }
   },
-  "options": {
-    "step": {
-      "init": {
-        "title": "Appliances",
-        "description": "An appliance is a name plus the emitter pointed at it. Set it once here and you never type an emitter number again.",
-        "menu_options": {
-          "add": "Add an appliance",
-          "edit": "Change an emitter",
-          "remove": "Remove an appliance",
-          "add_climate": "Add an air conditioner",
-          "remove_command": "Delete a learned command"
+  "config_subentries": {
+    "appliance": {
+      "entry_type": "Appliance",
+      "initiate_flow": {
+        "user": "Add appliance",
+        "reconfigure": "Manage appliance"
+      },
+      "step": {
+        "user": {
+          "title": "Add appliance",
+          "description": "A television, a sound bar, a fan: anything whose keys you learn one by one. It appears under the board with its own device, and every key you learn becomes a button on it.",
+          "data": {
+            "name": "Name",
+            "channel": "Emitter"
+          },
+          "data_description": {
+            "name": "The name you will see on the device and use as device in the remote actions.",
+            "channel": "The emitter pointed at this appliance, counted in the order of the board template. It can be changed later without learning anything again."
+          }
+        },
+        "added": {
+          "title": "{name} is ready",
+          "description": "Learn its first key now, or finish and learn later from Manage appliance.",
+          "menu_options": {
+            "learn": "Learn a command now",
+            "finish": "Finish without learning"
+          }
+        },
+        "reconfigure": {
+          "title": "{name}",
+          "description": "What do you want to do with {name}?",
+          "menu_options": {
+            "learn": "Learn a command",
+            "delete_command": "Delete a learned command",
+            "channel": "Change the emitter",
+            "rename": "Rename"
+          }
+        },
+        "learn": {
+          "title": "Learn a command",
+          "description": "What is the key called? Give it a short name, such as power or volume up. After you continue, point the remote at the board and press that key once.",
+          "data": {
+            "command": "Command"
+          },
+          "data_description": {
+            "command": "Becomes the name of the button, on the {name} device."
+          }
+        },
+        "learn_wait": {
+          "title": "Waiting for {command}"
+        },
+        "learned": {
+          "title": "{command} learned",
+          "description": "The button is there, on the {name} device. Learn the next key, or finish.",
+          "menu_options": {
+            "learn": "Learn another command",
+            "finish": "Done"
+          }
+        },
+        "learn_timeout": {
+          "title": "Nothing arrived",
+          "description": "The board heard no usable key in 30 seconds. Check that the remote points at the receiver and press the key once, on its own: a key pressed from too far away arrives broken and is thrown away.",
+          "menu_options": {
+            "learn_wait": "Try again",
+            "learn": "Learn a different command",
+            "finish": "Stop here"
+          }
+        },
+        "learn_hvac": {
+          "title": "That is an air conditioner remote",
+          "description": "One capture from an air conditioner remote is one temperature in one mode, so a button made from it would always send the same thing. Add the unit with Add air conditioner instead, which reads the vendor from this same remote and builds every command.",
+          "menu_options": {
+            "learn_wait": "Try again",
+            "learn": "Learn a different command",
+            "finish": "Stop here"
+          }
+        },
+        "learn_too_large": {
+          "title": "The code is too large",
+          "description": "This key arrived as a raw code larger than the board can send in one MQTT message, so a button made from it would never work.",
+          "menu_options": {
+            "learn_wait": "Try again",
+            "learn": "Learn a different command",
+            "finish": "Stop here"
+          }
+        },
+        "delete_command": {
+          "title": "Delete a learned command",
+          "description": "The button of the command goes with it, and it can be learned again from scratch.",
+          "data": {
+            "command": "Command"
+          }
+        },
+        "channel": {
+          "title": "Change the emitter",
+          "description": "Every command of {name} leaves through the new emitter from now on. Nothing has to be learned again.",
+          "data": {
+            "channel": "Emitter"
+          }
+        },
+        "rename": {
+          "title": "Rename",
+          "description": "The buttons, the codes and the emitter stay as they are.",
+          "data": {
+            "name": "Name"
+          }
         }
       },
-      "add": {
-        "title": "Add an appliance",
-        "description": "Use the same name you will pass as 'device' when learning and sending.",
-        "data": {
-          "name": "Name",
-          "channel": "Emitter"
-        }
+      "progress": {
+        "wait_for_key": "Point the remote of {name} at the board and press {command} once. Holding it is fine; two different keys in a row are not. Waiting up to 30 seconds."
       },
-      "edit": {
-        "title": "Change an emitter",
-        "data": {
-          "name": "Appliance",
-          "channel": "Emitter"
-        }
+      "error": {
+        "name_empty": "Give it a name.",
+        "name_taken": "Another appliance of this board already has this name.",
+        "command_empty": "Give the key a name."
       },
-      "remove": {
-        "title": "Remove an appliance",
-        "description": "The codes it learned are kept until you delete them with remote.delete_command.",
-        "data": {
-          "name": "Appliance"
-        }
-      },
-      "add_climate": {
-        "title": "Add an air conditioner",
-        "description": "Name it and say which emitter points at it. The vendor and the model are read from your own remote in the next step.",
-        "data": {
-          "name": "Name",
-          "channel": "Emitter"
-        }
-      },
-      "learn_climate": {
-        "title": "Point the remote at the board",
-        "description": "Press any key on the remote of '{name}' while this window is open. The firmware decodes the whole frame, so the vendor, the model and the supported modes come from the unit itself. There is nothing to look up in a manual."
-      },
-      "remove_command": {
-        "title": "Delete a learned command",
-        "description": "Pick the command you learned wrong. Its button disappears with it, and you can learn it again from scratch.",
-        "data": {
-          "command": "Command"
-        }
+      "abort": {
+        "board_not_loaded": "The board is not running right now. Check that it is online, then try again.",
+        "no_receiver": "This board has no IRrecv GPIO assigned, so it cannot learn. Assign one in the Tasmota template and reload the integration.",
+        "no_commands": "Nothing has been learned for this appliance yet.",
+        "command_deleted": "{command} was deleted, together with its button.",
+        "done": "Done.",
+        "reconfigure_successful": "Saved."
       }
     },
-    "abort": {
-      "no_appliances": "No appliance has been added yet.",
-      "no_commands": "Nothing has been learned on this board yet."
-    },
-    "error": {
-      "no_hvac_frame": "No air conditioner frame was decoded. Press a key on the remote of the unit, pointed at the receiver, one press on its own. A remote that is not an air conditioner will not work here: use 'Add an appliance' for those."
+    "climate": {
+      "entry_type": "Air conditioner",
+      "initiate_flow": {
+        "user": "Add air conditioner",
+        "reconfigure": "Manage air conditioner"
+      },
+      "step": {
+        "user": {
+          "title": "Add air conditioner",
+          "description": "Nothing is learned key by key here. The firmware knows the protocol of dozens of vendors and builds every command from mode, temperature, fan and vane. In the next step it reads the vendor and the model from the unit's own remote.",
+          "data": {
+            "name": "Name",
+            "channel": "Emitter"
+          },
+          "data_description": {
+            "channel": "The emitter pointed at this appliance, counted in the order of the board template. It can be changed later without learning anything again."
+          }
+        },
+        "read_remote": {
+          "title": "Reading the remote of {name}"
+        },
+        "read_failed": {
+          "title": "No air conditioner frame",
+          "description": "Press one key of the remote of {name}, pointed at the receiver, one key at a time. A remote that is not an air conditioner does not work here: add those with Add appliance.",
+          "submit": "Try again"
+        },
+        "reconfigure": {
+          "title": "{name}",
+          "description": "{vendor}, model {model}. What do you want to do?",
+          "menu_options": {
+            "settings": "Settings",
+            "read_remote": "Read the remote again",
+            "channel": "Change the emitter",
+            "rename": "Rename"
+          }
+        },
+        "settings": {
+          "title": "Settings",
+          "description": "What the firmware is told about {name}, a {vendor} unit.",
+          "data": {
+            "model": "Model",
+            "min_temp": "Lowest temperature",
+            "max_temp": "Highest temperature",
+            "hvac_modes": "Modes",
+            "swing_vertical": "Vertical vane",
+            "swing_horizontal": "Horizontal vane"
+          },
+          "data_description": {
+            "model": "Some vendors make several remotes that look alike to the decoder, and the model decides what the firmware sends. If the vane does not respond, try another model here. For LG, AKB74955603 is the one that sends the vane.",
+            "hvac_modes": "Only the modes your unit really has. Off is always there.",
+            "swing_vertical": "Offer the vane positions on the card. Off by default for vendors where the vane is a toggle, because there every command would flip it.",
+            "swing_horizontal": "Only for units with a horizontal vane that the remote controls."
+          }
+        },
+        "channel": {
+          "title": "Change the emitter",
+          "description": "Every command of {name} leaves through the new emitter from now on. Nothing has to be learned again.",
+          "data": {
+            "channel": "Emitter"
+          }
+        },
+        "rename": {
+          "title": "Rename",
+          "description": "The buttons, the codes and the emitter stay as they are.",
+          "data": {
+            "name": "Name"
+          }
+        }
+      },
+      "progress": {
+        "wait_for_key": "Point the remote of {name} at the board and press any key. The firmware decodes the whole frame, vendor and model included, so there is nothing to look up in a manual. Waiting up to 30 seconds."
+      },
+      "error": {
+        "name_empty": "Give it a name.",
+        "name_taken": "Another appliance of this board already has this name.",
+        "no_hvac_frame": "No air conditioner frame was decoded.",
+        "temp_range": "The highest temperature has to be above the lowest.",
+        "no_modes": "Choose at least one mode besides off."
+      },
+      "abort": {
+        "board_not_loaded": "The board is not running right now. Check that it is online, then try again.",
+        "no_receiver": "This board has no IRrecv GPIO assigned, so it cannot learn. Assign one in the Tasmota template and reload the integration.",
+        "reconfigure_successful": "Saved."
+      }
+    }
+  },
+  "selector": {
+    "hvac_mode": {
+      "options": {
+        "off": "Off",
+        "cool": "Cool",
+        "heat": "Heat",
+        "dry": "Dry",
+        "fan_only": "Fan only",
+        "auto": "Auto"
+      }
     }
   },
   "entity": {
     "remote": {
       "tasmota_ir": {
         "name": "[%key:component::tasmota_ir::title%]"
+      }
+    },
+    "climate": {
+      "air_conditioner": {
+        "state_attributes": {
+          "swing_mode": {
+            "state": {
+              "off": "Fixed",
+              "auto": "Swing",
+              "highest": "Highest",
+              "high": "High",
+              "middle": "Middle",
+              "low": "Low",
+              "lowest": "Lowest"
+            }
+          },
+          "swing_horizontal_mode": {
+            "state": {
+              "off": "Fixed",
+              "auto": "Swing",
+              "left_max": "Far left",
+              "left": "Left",
+              "middle": "Centre",
+              "right": "Right",
+              "right_max": "Far right",
+              "wide": "Wide"
+            }
+          }
+        }
       }
     }
   },

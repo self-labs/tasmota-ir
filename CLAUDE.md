@@ -8,11 +8,13 @@ cleanly, pass lint, and not break an existing install on upgrade.
 ## What this integration is, in one paragraph
 
 One MQTT conversation per board, owned by `coordinator.py`. Every platform talks
-through it, so no entity builds a topic or picks an emitter by itself. Learned
-codes live in Home Assistant's `.storage`, keyed `{appliance: {command: code}}`,
-the same shape Broadlink uses. The emitter is a property of the appliance, set
-once in the options flow and injected on publish, never passed as a service
-parameter.
+through it, so no entity builds a topic or picks an emitter by itself. Each
+appliance is a **config subentry** of its board, of type `appliance` or
+`climate`, with its own device linked to the board by `via_device`. Learned
+codes live in Home Assistant's `.storage`, keyed `{appliance key: {command:
+code}}`, where the key is the subentry `unique_id`. The emitter is a property of
+the appliance, set in its subentry and injected on publish, never passed as a
+service parameter.
 
 ## Layout
 
@@ -21,21 +23,26 @@ custom_components/tasmota_ir/
 ├── __init__.py       setup and teardown of a config entry
 ├── const.py          every string and number that is not local to one file
 ├── coordinator.py    the MQTT link, the stored codes, the appliance mapping
-├── entity.py         the base class, and the device merge by MAC
-├── config_flow.py    add a board, manage appliances
+├── entity.py         the base class, and the board and appliance devices
+├── config_flow.py    add a board; the appliance and climate subentry flows
 ├── remote.py         learn, send, delete
 ├── button.py         one entity per learned command
 ├── climate.py        one entity per air conditioner
 └── event.py          the receiver as an event source
 hacs.json             HACS metadata
+tests/                pytest against Home Assistant, via the custom component harness
+.github/workflows/    tests, hassfest and the HACS validation on every push
 ```
 
 ## Rules that are not obvious
 
-- **Never create a second device for a board.** `entity.py` declares
-  `connections={(CONNECTION_NETWORK_MAC, mac)}`, which is what the Tasmota
-  integration uses, so Home Assistant attaches this config entry to the device
-  the user already has. Adding `identifiers` would split it in two.
+- **Devices are registered in `__init__.py`, before the platforms.** The board
+  device carries `identifiers={(DOMAIN, entry_id)}` and the MAC in
+  `connections`, which matches it to the Tasmota device (merged on older Home
+  Assistant, linked on 2026.9 and newer). Each appliance device carries
+  `identifiers={(DOMAIN, key)}`, its `config_subentry_id` and the board as
+  `via_device`. Entities only point at them by identifier. Registering them up
+  front is what lets an appliance with nothing learned still show up.
 - **Discard partial captures.** A truncated frame arrives with `Data` of `"0x"`
   and `Bits` of `0`. Storing one produces a command that is accepted, saved,
   listed in the interface and does nothing. `is_usable_code` is the gate and it
@@ -46,9 +53,17 @@ hacs.json             HACS metadata
   at send time.
 - **The channel is never a service parameter.** If a future feature seems to
   need one, the appliance mapping is the place to change, not the signature.
-- **Unique ids must survive a rename of the entity but not of the code.** The
-  button id is `{entry_id}_{appliance}_{command}`. Renaming an appliance has to
-  migrate both the storage keys and the entity registry, in the options flow.
+- **Everything hangs off the appliance key, never off its name.** The button id
+  is `{key}_{command}`, the climate id `{key}_climate`, the device identifier
+  `(DOMAIN, key)`, and the store is keyed by it. A rename is only a new subentry
+  title. Version 1 keyed everything by name; `async_migrate_entry` moves an old
+  install over and keeps the entity ids.
+- **No placeholder in a translation is ever wrapped in apostrophes.** The
+  frontend formats strings as ICU messages, where `'{name}'` escapes the
+  placeholder and shows `{name}` literally.
+- **A step that waits for the remote is a progress step.** It starts waiting the
+  moment it opens. A form that only waits after Submit tells the user to press
+  a key that nobody is listening for yet.
 
 ## Style
 
@@ -61,6 +76,14 @@ hacs.json             HACS metadata
   not just what failed.
 - **Never use em dashes or en dashes**, in code, comments, docstrings, commit
   messages or documentation. A comma, a colon, parentheses or a new sentence.
+
+## Tests
+
+`pip install -r requirements_test.txt`, then `pytest`. The harness pins the Home
+Assistant release it tests against. It does not run on Windows as is: Home
+Assistant imports `fcntl` and `resource`, and the harness blocks the loopback
+socket the Windows event loop needs. Run it in CI, WSL or a Linux box, or stub
+those two modules in a throwaway venv.
 
 ## Commits
 

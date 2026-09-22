@@ -22,67 +22,263 @@
       "mqtt_unavailable": "O MQTT não está disponível. Configure a integração MQTT antes."
     }
   },
-  "options": {
-    "step": {
-      "init": {
-        "title": "Aparelhos",
-        "description": "Um aparelho é um nome mais o emissor apontado para ele. Configure uma vez aqui e você nunca mais digita número de emissor.",
-        "menu_options": {
-          "add": "Acrescentar aparelho",
-          "edit": "Trocar o emissor",
-          "remove": "Remover aparelho",
-          "add_climate": "Acrescentar ar-condicionado",
-          "remove_command": "Apagar comando aprendido"
+  "config_subentries": {
+    "appliance": {
+      "entry_type": "Aparelho",
+      "initiate_flow": {
+        "user": "Adicionar aparelho",
+        "reconfigure": "Gerenciar aparelho"
+      },
+      "step": {
+        "user": {
+          "title": "Adicionar aparelho",
+          "description": "Uma TV, uma soundbar, um ventilador: qualquer coisa cujas teclas você aprende uma a uma. Ele aparece embaixo da placa, com dispositivo próprio, e cada tecla aprendida vira um botão nele.",
+          "data": {
+            "name": "Nome",
+            "channel": "Emissor"
+          },
+          "data_description": {
+            "name": "O nome que aparece no dispositivo e que você usa como device nas ações do remote.",
+            "channel": "O emissor apontado para este aparelho, na ordem do template da placa. Dá para trocar depois sem aprender nada de novo."
+          }
+        },
+        "added": {
+          "title": "{name} está pronto",
+          "description": "Aprenda a primeira tecla agora, ou conclua e aprenda depois em Gerenciar aparelho.",
+          "menu_options": {
+            "learn": "Aprender um comando agora",
+            "finish": "Concluir sem aprender"
+          }
+        },
+        "reconfigure": {
+          "title": "{name}",
+          "description": "O que você quer fazer com {name}?",
+          "menu_options": {
+            "learn": "Aprender comando",
+            "delete_command": "Apagar comando aprendido",
+            "channel": "Trocar o emissor",
+            "rename": "Renomear"
+          }
+        },
+        "learn": {
+          "title": "Aprender comando",
+          "description": "Como a tecla se chama? Dê um nome curto, como power ou volume mais. Depois de continuar, aponte o controle para a placa e aperte essa tecla uma vez.",
+          "data": {
+            "command": "Comando"
+          },
+          "data_description": {
+            "command": "Vira o nome do botão, no dispositivo {name}."
+          }
+        },
+        "learn_wait": {
+          "title": "Esperando {command}"
+        },
+        "learned": {
+          "title": "{command} aprendido",
+          "description": "O botão já está lá, no dispositivo {name}. Aprenda a próxima tecla, ou conclua.",
+          "menu_options": {
+            "learn": "Aprender outro comando",
+            "finish": "Concluir"
+          }
+        },
+        "learn_timeout": {
+          "title": "Nada chegou",
+          "description": "A placa não ouviu nenhuma tecla aproveitável em 30 segundos. Confira se o controle aponta para o receptor e aperte a tecla uma vez, sozinha: uma tecla apertada de longe demais chega quebrada e é descartada.",
+          "menu_options": {
+            "learn_wait": "Tentar de novo",
+            "learn": "Aprender outro comando",
+            "finish": "Parar por aqui"
+          }
+        },
+        "learn_hvac": {
+          "title": "Esse é um controle de ar-condicionado",
+          "description": "Uma captura de controle de ar-condicionado é uma temperatura num modo, então um botão feito dela mandaria sempre a mesma coisa. Cadastre o aparelho em Adicionar ar-condicionado, que lê o fabricante deste mesmo controle e monta todos os comandos.",
+          "menu_options": {
+            "learn_wait": "Tentar de novo",
+            "learn": "Aprender outro comando",
+            "finish": "Parar por aqui"
+          }
+        },
+        "learn_too_large": {
+          "title": "O código é grande demais",
+          "description": "Esta tecla chegou como código bruto maior do que a placa consegue mandar numa mensagem MQTT, então um botão feito dela nunca funcionaria.",
+          "menu_options": {
+            "learn_wait": "Tentar de novo",
+            "learn": "Aprender outro comando",
+            "finish": "Parar por aqui"
+          }
+        },
+        "delete_command": {
+          "title": "Apagar comando aprendido",
+          "description": "O botão do comando some junto, e ele pode ser aprendido de novo do zero.",
+          "data": {
+            "command": "Comando"
+          }
+        },
+        "channel": {
+          "title": "Trocar o emissor",
+          "description": "Todos os comandos de {name} passam a sair pelo emissor novo. Nada precisa ser aprendido de novo.",
+          "data": {
+            "channel": "Emissor"
+          }
+        },
+        "rename": {
+          "title": "Renomear",
+          "description": "Os botões, os códigos e o emissor continuam como estão.",
+          "data": {
+            "name": "Nome"
+          }
         }
       },
-      "add": {
-        "title": "Acrescentar aparelho",
-        "description": "Use o mesmo nome que você vai passar em 'device' ao aprender e ao emitir.",
-        "data": {
-          "name": "Nome",
-          "channel": "Emissor"
-        }
+      "progress": {
+        "wait_for_key": "Aponte o controle de {name} para a placa e aperte {command} uma vez. Pode segurar a tecla; o que não pode é apertar duas teclas diferentes seguidas. Esperando até 30 segundos."
       },
-      "edit": {
-        "title": "Trocar o emissor",
-        "data": {
-          "name": "Aparelho",
-          "channel": "Emissor"
-        }
+      "error": {
+        "name_empty": "Dê um nome.",
+        "name_taken": "Outro aparelho desta placa já tem esse nome.",
+        "command_empty": "Dê um nome para a tecla."
       },
-      "remove": {
-        "title": "Remover aparelho",
-        "description": "Os códigos aprendidos continuam guardados até você apagá-los com o remote.delete_command.",
-        "data": {
-          "name": "Aparelho"
-        }
-      },
-      "add_climate": {
-        "title": "Acrescentar ar-condicionado",
-        "description": "Dê um nome e diga qual emissor aponta para ele. O fabricante e o modelo são lidos do seu próprio controle no passo seguinte.",
-        "data": {
-          "name": "Nome",
-          "channel": "Emissor"
-        }
-      },
-      "learn_climate": {
-        "title": "Aponte o controle para a placa",
-        "description": "Aperte qualquer tecla do controle do '{name}' com esta janela aberta. O firmware decodifica o quadro inteiro, então o fabricante, o modelo e os modos suportados vêm do próprio aparelho. Não há nada para procurar em manual."
-      },
-      "remove_command": {
-        "title": "Apagar comando aprendido",
-        "description": "Escolha o comando que foi aprendido errado. O botão dele some junto, e você pode aprender de novo do zero.",
-        "data": {
-          "command": "Comando"
-        }
+      "abort": {
+        "board_not_loaded": "A placa não está rodando agora. Confira se ela está online e tente de novo.",
+        "no_receiver": "Esta placa não tem GPIO de IRrecv, então não consegue aprender. Atribua um no template do Tasmota e recarregue a integração.",
+        "no_commands": "Nada foi aprendido para este aparelho ainda.",
+        "command_deleted": "{command} foi apagado, junto com o botão.",
+        "done": "Pronto.",
+        "reconfigure_successful": "Salvo."
       }
     },
-    "abort": {
-      "no_appliances": "Nenhum aparelho foi acrescentado ainda.",
-      "no_commands": "Nada foi aprendido nesta placa ainda."
+    "climate": {
+      "entry_type": "Ar-condicionado",
+      "initiate_flow": {
+        "user": "Adicionar ar-condicionado",
+        "reconfigure": "Gerenciar ar-condicionado"
+      },
+      "step": {
+        "user": {
+          "title": "Adicionar ar-condicionado",
+          "description": "Aqui nada se aprende tecla por tecla. O firmware conhece o protocolo de dezenas de fabricantes e monta cada comando a partir de modo, temperatura, ventilador e paleta. No próximo passo ele lê o fabricante e o modelo do próprio controle do aparelho.",
+          "data": {
+            "name": "Nome",
+            "channel": "Emissor"
+          },
+          "data_description": {
+            "channel": "O emissor apontado para este aparelho, na ordem do template da placa. Dá para trocar depois sem aprender nada de novo."
+          }
+        },
+        "read_remote": {
+          "title": "Lendo o controle de {name}"
+        },
+        "read_failed": {
+          "title": "Nenhum quadro de ar-condicionado",
+          "description": "Aperte uma tecla do controle de {name}, apontado para o receptor, uma tecla de cada vez. Controle que não é de ar-condicionado não funciona aqui: cadastre esses em Adicionar aparelho.",
+          "submit": "Tentar de novo"
+        },
+        "reconfigure": {
+          "title": "{name}",
+          "description": "{vendor}, modelo {model}. O que você quer fazer?",
+          "menu_options": {
+            "settings": "Ajustes",
+            "read_remote": "Ler o controle de novo",
+            "channel": "Trocar o emissor",
+            "rename": "Renomear"
+          }
+        },
+        "settings": {
+          "title": "Ajustes",
+          "description": "O que o firmware sabe sobre {name}, um aparelho {vendor}.",
+          "data": {
+            "model": "Modelo",
+            "min_temp": "Temperatura mínima",
+            "max_temp": "Temperatura máxima",
+            "hvac_modes": "Modos",
+            "swing_vertical": "Paleta vertical",
+            "swing_horizontal": "Paleta horizontal"
+          },
+          "data_description": {
+            "model": "Alguns fabricantes têm vários controles que o decodificador não distingue, e o modelo decide o que o firmware manda. Se a paleta não responder, troque o modelo aqui. No LG, o AKB74955603 é o que manda a paleta.",
+            "hvac_modes": "Só os modos que o seu aparelho tem de verdade. Desligado está sempre lá.",
+            "swing_vertical": "Mostra as posições da paleta no card. Vem desligado nos fabricantes em que a paleta é um liga e desliga, porque ali cada comando a inverteria.",
+            "swing_horizontal": "Só para aparelhos com paleta horizontal comandada pelo controle."
+          }
+        },
+        "channel": {
+          "title": "Trocar o emissor",
+          "description": "Todos os comandos de {name} passam a sair pelo emissor novo. Nada precisa ser aprendido de novo.",
+          "data": {
+            "channel": "Emissor"
+          }
+        },
+        "rename": {
+          "title": "Renomear",
+          "description": "Os botões, os códigos e o emissor continuam como estão.",
+          "data": {
+            "name": "Nome"
+          }
+        }
+      },
+      "progress": {
+        "wait_for_key": "Aponte o controle de {name} para a placa e aperte qualquer tecla. O firmware decodifica o quadro inteiro, fabricante e modelo inclusos, então não há nada para procurar em manual. Esperando até 30 segundos."
+      },
+      "error": {
+        "name_empty": "Dê um nome.",
+        "name_taken": "Outro aparelho desta placa já tem esse nome.",
+        "no_hvac_frame": "Nenhum quadro de ar-condicionado foi decodificado.",
+        "temp_range": "A temperatura máxima precisa ser maior que a mínima.",
+        "no_modes": "Escolha pelo menos um modo além de desligado."
+      },
+      "abort": {
+        "board_not_loaded": "A placa não está rodando agora. Confira se ela está online e tente de novo.",
+        "no_receiver": "Esta placa não tem GPIO de IRrecv, então não consegue aprender. Atribua um no template do Tasmota e recarregue a integração.",
+        "reconfigure_successful": "Salvo."
+      }
+    }
+  },
+  "selector": {
+    "hvac_mode": {
+      "options": {
+        "off": "Desligado",
+        "cool": "Refrigerar",
+        "heat": "Aquecer",
+        "dry": "Desumidificar",
+        "fan_only": "Só ventilar",
+        "auto": "Automático"
+      }
+    }
+  },
+  "entity": {
+    "remote": {
+      "tasmota_ir": {
+        "name": "[%key:component::tasmota_ir::title%]"
+      }
     },
-    "error": {
-      "no_hvac_frame": "Nenhum quadro de ar-condicionado foi decodificado. Aperte uma tecla do controle do aparelho, apontado para o receptor, uma tecla de cada vez. Controle que não é de ar-condicionado não funciona aqui: para esses, use 'Acrescentar aparelho'."
+    "climate": {
+      "air_conditioner": {
+        "state_attributes": {
+          "swing_mode": {
+            "state": {
+              "off": "Parada",
+              "auto": "Oscilando",
+              "highest": "Mais alta",
+              "high": "Alta",
+              "middle": "Meio",
+              "low": "Baixa",
+              "lowest": "Mais baixa"
+            }
+          },
+          "swing_horizontal_mode": {
+            "state": {
+              "off": "Parada",
+              "auto": "Oscilando",
+              "left_max": "Toda à esquerda",
+              "left": "Esquerda",
+              "middle": "Centro",
+              "right": "Direita",
+              "right_max": "Toda à direita",
+              "wide": "Aberta"
+            }
+          }
+        }
+      }
     }
   },
   "title": "Tasmota IR"

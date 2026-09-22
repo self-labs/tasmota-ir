@@ -83,8 +83,9 @@ class TasmotaIrEvent(TasmotaIrEntity, EventEntity):
         data = received.get("Data")
         if not data:
             return None
-        for appliance, commands in self.coordinator.codes.items():
+        appliances = self.coordinator.appliances
+        for key, commands in self.coordinator.codes.items():
             for command, code in commands.items():
-                if code.get("Data") == data:
-                    return f"{appliance}/{command}"
+                if code.get("Data") == data and key in appliances:
+                    return f"{appliances[key].name}/{command}"
         return None

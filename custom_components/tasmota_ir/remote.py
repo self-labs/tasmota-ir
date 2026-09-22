@@ -3,6 +3,10 @@
 One entity per board. The emitter is never a parameter here, it is a property
 of the appliance, so a command sent to the television cannot leave through the
 emitter pointed at the air conditioner.
+
+``device`` in these actions is the appliance name, the title of its subentry.
+Learning under a name that does not exist yet creates the appliance, so nothing
+learned through an action is ever hidden from the interface.
 """
 
 from __future__ import annotations
@@ -11,6 +15,7 @@ import asyncio
 import logging
 from collections.abc import Iterable
 from typing import Any
+from uuid import uuid4
 
 from homeassistant.components.remote import (
     ATTR_COMMAND,
@@ -29,13 +34,14 @@ from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
 
 from .const import (
-    DOMAIN,
     LEARN_TIMEOUT,
     SIGNAL_CODES_UPDATED,
 )
 from .coordinator import (
+    Appliance,
     CodeTooLargeError,
     TasmotaIrCoordinator,
+    check_code_size,
     extract_code,
     is_hvac_frame,
 )
@@ -80,9 +86,7 @@ class TasmotaIrRemote(TasmotaIrEntity, RemoteEntity, RestoreEntity):
         self.async_on_remove(
             async_dispatcher_connect(
                 self.hass,
-                SIGNAL_CODES_UPDATED.format(
-                    entry_id=self.coordinator.entry.entry_id
-                ),
+                SIGNAL_CODES_UPDATED.format(entry_id=self.coordinator.entry.entry_id),
                 self.async_write_ha_state,
             )
         )
@@ -97,9 +101,7 @@ class TasmotaIrRemote(TasmotaIrEntity, RemoteEntity, RestoreEntity):
         self._attr_is_on = False
         self.async_write_ha_state()
 
-    async def async_send_command(
-        self, command: Iterable[str], **kwargs: Any
-    ) -> None:
+    async def async_send_command(self, command: Iterable[str], **kwargs: Any) -> None:
         """Send one or more learned commands."""
         if not self._attr_is_on:
             _LOGGER.debug("%s is off, ignoring send", self.entity_id)
@@ -110,12 +112,10 @@ class TasmotaIrRemote(TasmotaIrEntity, RemoteEntity, RestoreEntity):
         delay: float = kwargs.get(ATTR_DELAY_SECS) or DEFAULT_DELAY_SECS
         commands = list(command)
 
-        codes = []
-        for name in commands:
-            code = self._resolve(appliance, name)
-            codes.append((name, code))
+        target = self._appliance(appliance)
+        codes = [(name, self._resolve(target, name)) for name in commands]
 
-        channel = self.coordinator.channel_for(appliance)
+        channel = self.coordinator.channel_for(target.key)
         for repeat in range(repeats):
             for index, (name, code) in enumerate(codes):
                 if repeat or index:
@@ -128,19 +128,32 @@ class TasmotaIrRemote(TasmotaIrEntity, RemoteEntity, RestoreEntity):
                         f"to accept in one MQTT message: {err}"
                     ) from err
 
-    def _resolve(self, appliance: str | None, command: str) -> dict[str, Any]:
-        """Find a stored code, or explain precisely what is missing."""
-        if appliance is None:
+    def _appliance(self, name: str | None) -> Appliance:
+        """Find the appliance by name, or say which names exist."""
+        if not name:
             raise ServiceValidationError(
                 "This remote stores commands per appliance, so 'device' is "
-                "required. Use the name you gave when learning, for example "
-                "device: 'Living room TV'."
+                "required. Use the appliance name shown under the board, for "
+                "example device: 'Living room TV'."
             )
-        code = self.coordinator.get_code(appliance, command)
-        if code is None:
-            known = ", ".join(sorted(self.coordinator.codes.get(appliance, {})))
+        appliance = self.coordinator.find_appliance(name)
+        if appliance is None:
+            names = ", ".join(
+                sorted(a.name for a in self.coordinator.appliances.values())
+            )
             raise ServiceValidationError(
-                f"'{appliance}' has no command called '{command}'."
+                f"There is no appliance called '{name}' on this board."
+                + (f" It has: {names}." if names else " It has none yet.")
+            )
+        return appliance
+
+    def _resolve(self, appliance: Appliance, command: str) -> dict[str, Any]:
+        """Find a stored code, or explain precisely what is missing."""
+        code = self.coordinator.get_code(appliance.key, command)
+        if code is None:
+            known = ", ".join(self.coordinator.commands_of(appliance.key))
+            raise ServiceValidationError(
+                f"'{appliance.name}' has no command called '{command}'."
                 + (f" It knows: {known}." if known else " It has no commands yet.")
             )
         return code
@@ -163,31 +176,43 @@ class TasmotaIrRemote(TasmotaIrEntity, RemoteEntity, RestoreEntity):
                 "Assign one in the Tasmota template and reload the integration."
             )
 
-        for name in commands:
-            received = await self.coordinator.async_wait_for_code(timeout)
-            if received is None:
-                raise HomeAssistantError(
-                    f"Nothing was received while learning '{name}'. Point the "
-                    "remote at the receiver and press the key once, on its own: "
-                    "two presses in a row decode as one broken frame."
-                )
-            if is_hvac_frame(received):
-                raise HomeAssistantError(
-                    f"That is an air conditioner remote, and storing it as "
-                    f"'{name}' would capture one temperature in one mode and "
-                    "nothing else. Add it through the integration options, "
-                    "'Add an air conditioner', which reads the vendor and the "
-                    "model from this same frame and then builds every command."
-                )
-            try:
-                await self.coordinator.async_store_code(
-                    appliance, name, extract_code(received)
-                )
-            except CodeTooLargeError as err:
-                raise HomeAssistantError(
-                    f"'{name}' was received but cannot be stored: {err}"
-                ) from err
-            _LOGGER.info("Learned %s/%s on %s", appliance, name, self.entity_id)
+        existing = self.coordinator.find_appliance(appliance)
+        key = existing.key if existing else uuid4().hex
+        learned: dict[str, dict[str, Any]] = {}
+        try:
+            for name in commands:
+                received = await self.coordinator.async_wait_for_code(timeout)
+                if received is None:
+                    raise HomeAssistantError(
+                        f"Nothing was received while learning '{name}'. Point the "
+                        "remote at the receiver and press the key once, on its "
+                        "own: two presses in a row decode as one broken frame."
+                    )
+                if is_hvac_frame(received):
+                    raise HomeAssistantError(
+                        f"That is an air conditioner remote, and storing it as "
+                        f"'{name}' would capture one temperature in one mode and "
+                        "nothing else. Add it under the board with 'Add an air "
+                        "conditioner', which reads the vendor and the model from "
+                        "this same frame and then builds every command."
+                    )
+                code = extract_code(received)
+                try:
+                    check_code_size(code)
+                except CodeTooLargeError as err:
+                    raise HomeAssistantError(
+                        f"'{name}' was received but cannot be stored: {err}"
+                    ) from err
+                learned[name] = code
+                _LOGGER.info("Learned %s/%s on %s", appliance, name, self.entity_id)
+        finally:
+            # Whatever was learned before a timeout is kept. For a new name the
+            # codes are written first and the appliance created after, because
+            # creating it reloads the entry.
+            if learned:
+                await self.coordinator.async_store_codes(key, learned)
+                if existing is None:
+                    self.coordinator.add_appliance(appliance, key=key)
 
     async def async_delete_command(self, **kwargs: Any) -> None:
         """Forget one or more commands."""
@@ -197,18 +222,21 @@ class TasmotaIrRemote(TasmotaIrEntity, RemoteEntity, RestoreEntity):
             raise ServiceValidationError(
                 "Deleting needs 'device', the appliance the command belongs to."
             )
+        target = self._appliance(appliance)
         for name in commands:
-            if not await self.coordinator.async_delete_code(appliance, name):
+            if not await self.coordinator.async_delete_code(target.key, name):
                 raise ServiceValidationError(
-                    f"'{appliance}' has no command called '{name}'."
+                    f"'{target.name}' has no command called '{name}'."
                 )
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         """Expose what the remote knows, so it can be inspected without the logs."""
-        codes = self.coordinator.codes
+        appliances = self.coordinator.appliances.values()
         return {
-            "appliances": sorted(codes),
-            "commands": {name: sorted(cmds) for name, cmds in codes.items()},
+            "appliances": sorted(a.name for a in appliances),
+            "commands": {
+                a.name: self.coordinator.commands_of(a.key) for a in appliances
+            },
             "emitters": self.coordinator.entry.data.get("channels", 1),
         }

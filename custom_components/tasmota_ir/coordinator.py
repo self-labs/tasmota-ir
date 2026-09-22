@@ -10,11 +10,14 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
+from dataclasses import dataclass
+from types import MappingProxyType
 from typing import Any
+from uuid import uuid4
 
 from homeassistant.components import mqtt
-from homeassistant.config_entries import ConfigEntry
+from homeassistant.config_entries import ConfigEntry, ConfigSubentry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.storage import Store
@@ -22,7 +25,6 @@ from homeassistant.helpers.storage import Store
 from .const import (
     CMND_GPIO,
     CMND_IRSEND,
-    CONF_APPLIANCES,
     CONF_CHANNEL,
     CONF_FULL_TOPIC,
     CONF_TOPIC,
@@ -31,9 +33,9 @@ from .const import (
     GPIO_IRSEND_PREFIX,
     KEY_CHANNEL,
     KEY_IR_RECEIVED,
-    MAX_CHANNELS,
     KEY_IRHVAC,
     KEY_RAW_DATA,
+    MAX_CHANNELS,
     MAX_CODE_BYTES,
     PROBE_TIMEOUT,
     PROTOCOL_RAW,
@@ -44,6 +46,8 @@ from .const import (
     STORAGE_KEY_FORMAT,
     STORAGE_SAVE_DELAY,
     STORAGE_VERSION,
+    SUBENTRY_APPLIANCE,
+    SUBENTRY_CLIMATE,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -51,6 +55,22 @@ _LOGGER = logging.getLogger(__name__)
 
 class CodeTooLargeError(Exception):
     """A captured code does not fit in the board's MQTT buffer."""
+
+
+@dataclass(frozen=True, slots=True)
+class Appliance:
+    """One appliance of a board, as its subentry describes it.
+
+    ``key`` is the subentry unique_id. The codes, the device and every entity
+    unique_id hang off it, never off the name, so a rename is only a new title.
+    """
+
+    key: str
+    subentry_id: str
+    name: str
+    kind: str
+    channel: int
+    data: Mapping[str, Any]
 
 
 class TasmotaIrCoordinator:
@@ -114,7 +134,9 @@ class TasmotaIrCoordinator:
         self._codes = await self._store.async_load() or {}
 
         self._unsubscribes.append(
-            await mqtt.async_subscribe(self.hass, self.result_topic, self._handle_result)
+            await mqtt.async_subscribe(
+                self.hass, self.result_topic, self._handle_result
+            )
         )
         self._unsubscribes.append(
             await mqtt.async_subscribe(self.hass, self.lwt_topic, self._handle_lwt)
@@ -296,22 +318,64 @@ class TasmotaIrCoordinator:
     # ------------------------------------------------------------------
 
     @property
-    def appliances(self) -> dict[str, dict[str, Any]]:
-        """The configured appliances, keyed by name."""
-        return dict(self.entry.options.get(CONF_APPLIANCES, {}))
+    def appliances(self) -> dict[str, Appliance]:
+        """The appliances of this board, keyed by their stable key."""
+        result: dict[str, Appliance] = {}
+        for subentry in self.entry.subentries.values():
+            if subentry.subentry_type not in (SUBENTRY_APPLIANCE, SUBENTRY_CLIMATE):
+                continue
+            if not subentry.unique_id:
+                continue
+            result[subentry.unique_id] = Appliance(
+                key=subentry.unique_id,
+                subentry_id=subentry.subentry_id,
+                name=subentry.title,
+                kind=subentry.subentry_type,
+                channel=int(subentry.data.get(CONF_CHANNEL, DEFAULT_CHANNEL)),
+                data=subentry.data,
+            )
+        return result
 
-    def channel_for(self, appliance: str | None) -> int:
+    def find_appliance(self, name: str | None) -> Appliance | None:
+        """The appliance a person means by this name, ignoring case."""
+        if not name:
+            return None
+        wanted = name.strip().casefold()
+        for appliance in self.appliances.values():
+            if appliance.name.strip().casefold() == wanted:
+                return appliance
+        return None
+
+    def channel_for(self, key: str | None) -> int:
         """The emitter an appliance is wired to.
 
         Nobody types this. It is configured once, which is the whole point: a
         channel that is never entered is a channel that is never entered wrong.
         """
-        if not appliance:
-            return DEFAULT_CHANNEL
-        config = self.appliances.get(appliance)
-        if not config:
-            return DEFAULT_CHANNEL
-        return int(config.get(CONF_CHANNEL, DEFAULT_CHANNEL))
+        appliance = self.appliances.get(key) if key else None
+        return appliance.channel if appliance else DEFAULT_CHANNEL
+
+    def add_appliance(
+        self, name: str, key: str | None = None, channel: int = DEFAULT_CHANNEL
+    ) -> str:
+        """Create an appliance subentry, for a name learned through the action.
+
+        ``remote.learn_command`` accepts any name, and a command kept under a
+        name nobody registered would be invisible in the interface and stuck on
+        the first emitter. Registering it here makes it show up under the board
+        like any other appliance, ready to be moved to its emitter.
+        """
+        key = key or uuid4().hex
+        self.hass.config_entries.async_add_subentry(
+            self.entry,
+            ConfigSubentry(
+                data=MappingProxyType({CONF_CHANNEL: channel}),
+                subentry_type=SUBENTRY_APPLIANCE,
+                title=name.strip(),
+                unique_id=key,
+            ),
+        )
+        return key
 
     # ------------------------------------------------------------------
     # Learned codes
@@ -319,46 +383,70 @@ class TasmotaIrCoordinator:
 
     @property
     def codes(self) -> dict[str, dict[str, Any]]:
-        """Every learned code, as {appliance: {command: code}}."""
+        """Every learned code, as {appliance key: {command: code}}."""
         return self._codes
 
-    def get_code(self, appliance: str, command: str) -> dict[str, Any] | None:
+    def get_code(self, key: str, command: str) -> dict[str, Any] | None:
         """One learned code, or None."""
-        return self._codes.get(appliance, {}).get(command)
+        return self._codes.get(key, {}).get(command)
+
+    def commands_of(self, key: str) -> list[str]:
+        """The commands one appliance knows, sorted for display."""
+        return sorted(self._codes.get(key, {}))
 
     async def async_store_code(
-        self, appliance: str, command: str, code: dict[str, Any]
+        self, key: str, command: str, code: dict[str, Any]
     ) -> None:
         """Remember a code and tell the button platform about it."""
-        encoded = json.dumps(code, separators=(",", ":"))
-        if len(encoded) > MAX_CODE_BYTES:
-            raise CodeTooLargeError(
-                f"the captured code is {len(encoded)} bytes, above the "
-                f"{MAX_CODE_BYTES} the board can accept in one message"
-            )
-        self._codes.setdefault(appliance, {})[command] = code
+        check_code_size(code)
+        self._codes.setdefault(key, {})[command] = code
         self._schedule_save()
         self._notify_codes_changed()
 
-    async def async_delete_code(self, appliance: str, command: str) -> bool:
+    async def async_store_codes(
+        self, key: str, codes: dict[str, dict[str, Any]]
+    ) -> None:
+        """Remember several codes at once, learned before the appliance existed.
+
+        Written to disk straight away: the subentry that owns them is created
+        right after, and that reloads the entry.
+        """
+        if not codes:
+            return
+        self._codes.setdefault(key, {}).update(codes)
+        await self._store.async_save(self._codes)
+        self._notify_codes_changed()
+
+    async def async_delete_code(self, key: str, command: str) -> bool:
         """Forget a code. Returns whether there was one."""
-        commands = self._codes.get(appliance)
+        commands = self._codes.get(key)
         if not commands or command not in commands:
             return False
         del commands[command]
         if not commands:
-            del self._codes[appliance]
+            del self._codes[key]
         self._schedule_save()
         self._notify_codes_changed()
         return True
 
-    async def async_rename_appliance(self, old: str, new: str) -> None:
-        """Carry the codes across when an appliance is renamed."""
-        if old == new or old not in self._codes:
-            return
-        self._codes[new] = self._codes.pop(old)
-        self._schedule_save()
-        self._notify_codes_changed()
+    def prune_codes(self) -> list[str]:
+        """Drop the codes of appliances that no longer exist.
+
+        Deleting an appliance in the interface removes its subentry, and with it
+        the only way to see or send those codes. Keeping them would leave data
+        nobody can reach, so they go at the next setup.
+        """
+        known = self.appliances
+        stale = [key for key in self._codes if key not in known]
+        for key in stale:
+            del self._codes[key]
+        if stale:
+            self._schedule_save()
+        return stale
+
+    async def async_flush(self) -> None:
+        """Write the codes now, before something reloads the entry."""
+        await self._store.async_save(self._codes)
 
     def _schedule_save(self) -> None:
         """Write to disk once, after the burst of edits settles."""
@@ -367,6 +455,16 @@ class TasmotaIrCoordinator:
     def _notify_codes_changed(self) -> None:
         async_dispatcher_send(
             self.hass, SIGNAL_CODES_UPDATED.format(entry_id=self.entry.entry_id)
+        )
+
+
+def check_code_size(code: dict[str, Any]) -> None:
+    """Refuse a code the board could never accept in one MQTT message."""
+    encoded = json.dumps(code, separators=(",", ":"))
+    if len(encoded) > MAX_CODE_BYTES:
+        raise CodeTooLargeError(
+            f"the captured code is {len(encoded)} bytes, above the "
+            f"{MAX_CODE_BYTES} the board can accept in one message"
         )
 
 
@@ -397,6 +495,13 @@ def is_usable_code(received: dict[str, Any]) -> bool:
     32 bit frame followed by eighteen of these in 2.4 seconds.
     """
     if received.get("Repeat") and not received.get("Bits"):
+        return False
+    # A frame the library recognised but could not finish reading. Seen with an
+    # LG air conditioner remote pressed from across the room: it arrived as SONY
+    # with zero bits, and with SetOption58 on it still carried RawData, so it
+    # used to pass as a raw capture that reproduces nothing.
+    protocol = received.get("Protocol")
+    if protocol not in (None, "", "UNKNOWN") and not received.get("Bits"):
         return False
     data = received.get("Data")
     bits = received.get("Bits")

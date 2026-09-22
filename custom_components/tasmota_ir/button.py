@@ -1,8 +1,8 @@
 """A button per learned command.
 
-This is the platform that removes the last script. Learn "Living room TV" /
-"power" and a ``button.living_room_tv_power`` appears, with a name, an area and
-a device, ready to drop on a dashboard. Nothing else has to be written.
+This is the platform that removes the last script. Learn "power" for the
+"Living room TV" and a button appears on that TV's own device, with a name, an
+area and a place on a dashboard. Nothing else has to be written.
 
 The entities are created and removed as the stored codes change, so a command
 learned now shows up now, without restarting anything, and a command deleted
@@ -12,6 +12,7 @@ takes its button with it.
 from __future__ import annotations
 
 import logging
+from collections import defaultdict
 from typing import Any
 
 from homeassistant.components.button import ButtonEntity
@@ -23,10 +24,15 @@ from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.entity_registry import async_get as async_get_entity_registry
 
 from .const import DOMAIN, SIGNAL_CODES_UPDATED
-from .coordinator import CodeTooLargeError, TasmotaIrCoordinator
+from .coordinator import Appliance, CodeTooLargeError, TasmotaIrCoordinator
 from .entity import TasmotaIrEntity
 
 _LOGGER = logging.getLogger(__name__)
+
+
+def button_unique_id(key: str, command: str) -> str:
+    """A stable id: it follows the appliance key, so a rename changes nothing."""
+    return f"{key}_{command}"
 
 
 async def async_setup_entry(
@@ -41,24 +47,28 @@ async def async_setup_entry(
     @callback
     def _sync() -> None:
         """Add buttons for new commands and drop the ones that went away."""
+        appliances = coordinator.appliances
         current = {
-            (appliance, command)
-            for appliance, commands in coordinator.codes.items()
+            (key, command)
+            for key, commands in coordinator.codes.items()
+            if key in appliances
             for command in commands
         }
 
-        if added := current - known:
-            async_add_entities(
+        added: dict[str, list[TasmotaIrButton]] = defaultdict(list)
+        for key, command in sorted(current - known):
+            appliance = appliances[key]
+            added[appliance.subentry_id].append(
                 TasmotaIrButton(coordinator, appliance, command)
-                for appliance, command in sorted(added)
             )
+        for subentry_id, buttons in added.items():
+            async_add_entities(buttons, config_subentry_id=subentry_id)
 
         if removed := known - current:
             registry = async_get_entity_registry(hass)
-            for appliance, command in removed:
-                unique_id = _unique_id(entry.entry_id, appliance, command)
+            for key, command in removed:
                 if entity_id := registry.async_get_entity_id(
-                    "button", DOMAIN, unique_id
+                    "button", DOMAIN, button_unique_id(key, command)
                 ):
                     registry.async_remove(entity_id)
 
@@ -73,46 +83,43 @@ async def async_setup_entry(
     )
 
 
-def _unique_id(entry_id: str, appliance: str, command: str) -> str:
-    """A stable id that survives a rename of the entity, but not of the code."""
-    return f"{entry_id}_{appliance}_{command}"
-
-
 class TasmotaIrButton(TasmotaIrEntity, ButtonEntity):
-    """One learned command, as a real entity."""
+    """One learned command, as a real entity on its appliance's device."""
+
+    _attr_icon = "mdi:remote"
 
     def __init__(
-        self, coordinator: TasmotaIrCoordinator, appliance: str, command: str
+        self, coordinator: TasmotaIrCoordinator, appliance: Appliance, command: str
     ) -> None:
         """Bind the button to one stored code."""
-        super().__init__(coordinator)
-        self._appliance = appliance
+        super().__init__(coordinator, appliance)
+        self._key = appliance.key
         self._command = command
-        self._attr_unique_id = _unique_id(
-            coordinator.entry.entry_id, appliance, command
-        )
-        self._attr_name = f"{appliance} {command}"
-        self._attr_icon = "mdi:remote"
+        self._attr_unique_id = button_unique_id(appliance.key, command)
+        # The device already carries the appliance name, so "power" on the
+        # "TV Quarto" device reads as "TV Quarto power".
+        self._attr_name = command
 
     async def async_press(self) -> None:
         """Send the code this button stands for."""
-        code = self.coordinator.get_code(self._appliance, self._command)
+        code = self.coordinator.get_code(self._key, self._command)
         if code is None:
             raise HomeAssistantError(
-                f"'{self._appliance}' no longer has a command called "
-                f"'{self._command}'."
+                f"This appliance no longer has a command called '{self._command}'."
             )
-        channel = self.coordinator.channel_for(self._appliance)
         try:
-            await self.coordinator.async_send_code(code, channel=channel)
+            await self.coordinator.async_send_code(
+                code, channel=self.coordinator.channel_for(self._key)
+            )
         except CodeTooLargeError as err:
             raise HomeAssistantError(str(err)) from err
 
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         """Say which appliance and emitter this button belongs to."""
+        appliance = self.coordinator.appliances.get(self._key)
         return {
-            "appliance": self._appliance,
+            "appliance": appliance.name if appliance else None,
             "command": self._command,
-            "emitter": self.coordinator.channel_for(self._appliance),
+            "emitter": self.coordinator.channel_for(self._key),
         }

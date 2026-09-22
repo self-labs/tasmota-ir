@@ -1,14 +1,14 @@
-[![HACS Custom](https://img.shields.io/badge/HACS-Custom-41BDF5?logo=home-assistant&logoColor=white)](https://hacs.xyz/) [![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2024.11%2B-41BDF5?logo=home-assistant&logoColor=white)](https://www.home-assistant.io/) [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
+[![HACS Custom](https://img.shields.io/badge/HACS-Custom-41BDF5?logo=home-assistant&logoColor=white)](https://hacs.xyz/) [![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2025.3%2B-41BDF5?logo=home-assistant&logoColor=white)](https://www.home-assistant.io/) [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
 
 # 📡 Tasmota IR
 
-Learn and send infrared from Home Assistant with any Tasmota board, through the
-standard `remote` services. No input helpers, no capture automation, no send
-script, no popup.
+Learn and send infrared from Home Assistant with any Tasmota board. No input
+helpers, no capture automation, no send script, no popup.
 
-Every command you learn becomes a real **button entity**, with a name, an area
-and a device, ready to drop on a dashboard. Air conditioners become real
-**climate entities**, built by the firmware rather than by a code per
+Every appliance you add appears **under its board**, with its own device. Every
+key you learn becomes a real **button entity** on that device, ready to drop on
+a dashboard. Air conditioners become real **climate entities**, built by the
+firmware from vendor, mode, temperature, fan and vane, rather than by a code per
 temperature.
 
 ## Why this exists
@@ -24,24 +24,35 @@ never typed is a channel that is never typed wrong.
 
 ## What you get
 
-| Entity    | What it does                                                                 |
-| --------- | ---------------------------------------------------------------------------- |
-| `remote`  | `learn_command`, `send_command` and `delete_command`, the standard services  |
-| `button`  | one per learned command, created the moment you learn it                     |
-| `climate` | one per air conditioner, with the vendor and model read from your own remote |
-| `event`   | the receiver as an event source, for automating on "a key was pressed"       |
+| Where            | Entity    | What it does                                                         |
+| ---------------- | --------- | -------------------------------------------------------------------- |
+| the board        | `remote`  | `learn_command`, `send_command` and `delete_command`, the standard services |
+| the board        | `event`   | the receiver, for automating on "a key was pressed" on any remote    |
+| each appliance   | `button`  | one per learned key, created the moment you learn it                 |
+| each air conditioner | `climate` | modes, temperature, fan and vane, read back from your own remote |
 
-The entities attach to the **same device** the Tasmota integration already
-created for the board, so they sit next to its diagnostics rather than in a card
-of their own.
+On the integration page it looks like this:
+
+```text
+Tasmota IR
+└── Hubb IR1                      the board: remote and receiver
+    ├── TV Quarto                 appliance, emitter 1
+    │   ├── TV Quarto power       button
+    │   └── TV Quarto volume up   button
+    ├── JBL Soundbar              appliance, emitter 2
+    └── Ar Escritorio             air conditioner, emitter 3
+        └── Ar Escritorio         climate
+```
 
 ## Requirements
 
-- Home Assistant 2024.11 or newer.
+- Home Assistant 2025.3 or newer.
 - An MQTT broker, with the Home Assistant MQTT integration set up.
 - A Tasmota board with `IRsend` assigned to at least one GPIO, and `IRrecv` if
   you want to learn. The full IR driver (`USE_IR_REMOTE_FULL`) is required for
   more than one emitter and for air conditioners.
+- `SetOption58 1` on the board, so remotes whose protocol the library does not
+  know can still be learned, as raw.
 
 ## Install
 
@@ -77,112 +88,120 @@ Tasmota already publishes. How many emitters it has is not a question, it is
 probed with a `Gpio` command and counted. A board with eight emitters and a
 board with one are handled by the same code, which knows neither model.
 
-## Where to run the commands below
+## Adding an appliance and learning its keys
 
-Every YAML block in this README is an **action**. Run it in **Developer Tools →
-Actions**, switching the form to YAML mode, or paste it unchanged into an
-automation or a script. That is the point of using the standard `remote`
-services: they work anywhere Home Assistant accepts an action.
+On **Settings → Devices & Services → Tasmota IR**, the board has two buttons:
+**Add appliance** and **Add air conditioner**.
 
-## Learning
+1. **Add appliance**, give it a name and the emitter pointed at it.
+2. Choose **Learn a command now**, name the key (`power`, `volume up`), and press
+   it once with the remote pointed at the board. The screen waits up to 30
+   seconds; there is nothing to click between naming the key and pressing it.
+3. **Learn another command**, or **Done**.
 
-```yaml
-action: remote.learn_command
-target:
-  entity_id: remote.living_room_blaster
-data:
-  device: Living room TV
-  command: power
-  timeout: 30
-```
-
-Point the remote at the receiver and press the key once. The call waits until a
-code arrives or the timeout runs out, and a
-`button.living_room_blaster_living_room_tv_power` appears the moment it is
-stored. No restart, on either side.
+To learn more keys later, open the appliance's menu on the integration page and
+choose **Manage appliance → Learn a command**. The appliance is the one you
+opened, so there is no question of which emitter the code is for.
 
 Three kinds of capture are refused on purpose, because storing them would create
 a button that looks right and does nothing:
 
-- **Partial frames.** Two presses in a row decode as one broken frame, with
-  empty `Data` and zero `Bits`.
+- **Broken frames.** Two presses in a row, or one from too far away, arrive as
+  a frame the library could not finish reading: empty `Data`, zero `Bits`,
+  sometimes labelled with the wrong protocol.
 - **Repeat frames.** While a key is held, a NEC remote sends the real frame once
   and then a burst every 108 ms meaning "keep repeating the last one". The burst
   carries no command. Holding the key is fine: the real frame is kept and the
   repeats are ignored.
 - **Air conditioner frames.** One capture from one of those remotes is one
-  temperature in one mode. Learning says so and points at the air conditioner
-  flow instead.
+  temperature in one mode. Learning says so and points at **Add air
+  conditioner** instead.
 
-## Sending
+## Managing an appliance
+
+**Manage appliance** on any appliance offers:
+
+| Entry                        | What it does                                                   |
+| ---------------------------- | -------------------------------------------------------------- |
+| **Learn a command**          | name a key, press it, and a button appears                     |
+| **Delete a learned command** | forget one command, and its button with it                     |
+| **Change the emitter**       | every command of the appliance leaves through the new emitter  |
+| **Rename**                   | a new name; buttons, codes and emitter stay as they are        |
+
+**Changing an emitter does not require learning anything again.** The code is
+stored per appliance and the emitter is looked up when it is sent.
+
+**Deleting an appliance deletes its codes.** Use the three-dot menu of the
+appliance on the integration page.
+
+## Using the actions
+
+Everything above also works as actions, in **Developer Tools → Actions** or in
+any automation or script. `device` is the appliance name, as shown under the
+board, ignoring case.
 
 ```yaml
 action: remote.send_command
 target:
-  entity_id: remote.living_room_blaster
+  entity_id: remote.hubb_ir1
 data:
-  device: Living room TV
+  device: TV Quarto
   command: power
   num_repeats: 1
   delay_secs: 0.4
 ```
 
-Or just press the button. If the name is wrong, the error lists the commands
-that appliance does know.
-
-## Appliances and their emitters
-
-A board with several emitters needs to know which one points at which
-appliance. Set it once, in **Settings → Devices & Services → Tasmota IR → your
-board → Configure**:
-
-| Menu entry                   | What it does                                          |
-| ---------------------------- | ----------------------------------------------------- |
-| **Add an appliance**         | a name plus the emitter pointed at it                 |
-| **Add an air conditioner**   | the same, then reads vendor and model from its remote |
-| **Change an emitter**        | move an appliance to another emitter                  |
-| **Remove an appliance**      | forget the appliance; its learned codes stay          |
-| **Delete a learned command** | forget one command, and its button with it            |
-
-**Changing an emitter does not require learning anything again.** The code is
-stored per appliance and the emitter is looked up when it is sent, so moving
-"Living room TV" from emitter 1 to emitter 3 makes every one of its buttons
-leave through emitter 3 from then on. The same goes for adding an appliance
-after learning its commands: learn first under a name, then add that exact name
-as an appliance with its emitter, and the existing buttons follow.
-
-An appliance that was never added uses emitter 1.
-
-## Deleting a command learned wrong
-
-From the interface: **Configure → Delete a learned command**, then pick it from
-the list.
-
-Or as an action:
+```yaml
+action: remote.learn_command
+target:
+  entity_id: remote.hubb_ir1
+data:
+  device: TV Quarto
+  command: power
+  timeout: 30
+```
 
 ```yaml
 action: remote.delete_command
 target:
-  entity_id: remote.living_room_blaster
+  entity_id: remote.hubb_ir1
 data:
-  device: Living room TV
+  device: TV Quarto
   command: power
 ```
 
-The button goes with it, and the command can be learned again from scratch.
+Learning under a name that is not an appliance yet creates the appliance, on
+emitter 1, so a command learned by action never ends up somewhere the interface
+does not show. If a name is wrong when sending, the error lists the appliances
+the board does have.
 
 ## Air conditioners
 
-**Configure → Add an air conditioner**, give it a name and an emitter, then
-point its remote at the board and press any key. The firmware decodes the whole
-frame, so the vendor, the model and the supported modes come from the unit
-itself. There is nothing to look up in a manual.
+**Add air conditioner**, give it a name and an emitter, then point its remote at
+the board and press any key. The firmware decodes the whole frame, so the
+vendor, the model and the supported modes come from the unit itself. There is
+nothing to look up in a manual.
 
 The result is a `climate` entity driven by Tasmota's `IRHVAC`, which assembles
-every command from vendor, mode, temperature and fan speed. It also reads back
-every frame the receiver hears, so the card follows the physical remote as
-well as Home Assistant. Setting a temperature on a unit that is off does not
-turn it on.
+every command from vendor, mode, temperature, fan speed and vane position. It
+also reads back every frame the receiver hears, so the card follows the physical
+remote as well as Home Assistant. Setting a temperature on a unit that is off
+does not turn it on.
+
+**Manage air conditioner → Settings** holds what the firmware is told:
+
+- **Model.** Some vendors make several remotes that look alike to the decoder,
+  and the model decides what the firmware sends. An LG read as `AKB75215403`
+  never sends the vane; the same unit set to `AKB74955603` does. The known
+  models of each vendor are offered, and any other can be typed.
+- **Temperature range and modes.** Only the modes your unit really has.
+- **Vertical and horizontal vane.** The vertical vane is on by default, except
+  for the vendors where the firmware treats it as a toggle (`COOLIX`,
+  `TRANSCOLD`, `MIDEA`, `CORONA_AC`, `HITACHI_AC344`, `HITACHI_AC424`,
+  `SHARP_AC`, `KELON`), because there every command would flip it.
+
+**Read the remote again** re-reads vendor and model from the remote, for a unit
+that was added with the wrong remote in hand.
 
 ## Automating on a key press
 
@@ -191,15 +210,30 @@ not its code was learned. The payload says which protocol it was, whether it
 matches something already learned (`known_as`), and whether it came from an air
 conditioner (`is_hvac`).
 
+## Upgrading from 2026.9.5 or older
+
+The first start migrates by itself. Each appliance of the old **Configure** menu
+becomes an appliance under the board, with the same emitter; a name that only
+had learned codes becomes an appliance on emitter 1. The codes move with them,
+and **entity ids do not change**, so dashboards and automations keep working.
+Friendly names lose the board prefix, because the device already carries the
+appliance name: `Hubb IR1 TV Quarto power` becomes `TV Quarto power`.
+
 ## Known limits
 
 - **Raw codes always leave through the first emitter.** A remote whose protocol
   the firmware does not know is stored as raw, and Tasmota's raw send form takes
   no channel at all. This is a firmware limit; the integration logs a warning
-  when such an appliance is set to another emitter.
+  when a raw code is sent for an appliance on another emitter.
 - **A code larger than about 1 KB cannot be sent.** The board's MQTT buffer
   defaults to 1200 bytes and has to carry the topic too. Such a capture is
   refused when learning, with a message, rather than failing later.
+- **The card follows the physical remote only when the frame arrives whole.** A
+  key pressed from across the room can decode as something else, and then there
+  is nothing to follow.
+- **One previous state per board.** The firmware remembers a single last frame
+  for the whole board, and toggle-based vendors decide what to flip from it. Two
+  air conditioners of such a vendor on the same board can confuse each other.
 - **The icon in the HACS catalogue** keeps a placeholder. The device and
   integration pages show the right one; the catalogue listing is
   [hacs/integration#5171](https://github.com/hacs/integration/issues/5171).
@@ -208,8 +242,13 @@ conditioner (`is_hvac`).
 
 - KinCony KC868-AG8, ESP32-S3, 8 emitters and a receiver. Learned an LG
   television's power key (NEC, 32 bits) from its own remote and switched the
-  set on and off with the button that was created.
+  set on and off with the button that was created. Added an LG split from its
+  remote (`LG2`, `AKB75215403`) and drove power, mode, temperature and fan from
+  the climate entity, each change confirmed by the unit's own Wi-Fi reporting
+  about a second later.
 - Athom IR Remote, ESP32, one emitter.
+- The test suite, against Home Assistant 2026.9.3: `pip install -r
+  requirements_test.txt`, then `pytest`.
 
 Any Tasmota board with an `IRsend` GPIO should work. If yours does not, open an
 issue with the reply your board gives to `Gpio 255`.

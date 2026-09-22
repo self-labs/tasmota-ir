@@ -9,6 +9,32 @@ about compatibility, only when it was published.
 
 ## [Unreleased]
 
+## [2026.9.6] - 2026-09-22
+
+### Added
+
+- **Every appliance is listed under its board, with its own device.** Appliances are now config subentries: the board shows **Add appliance** and **Add air conditioner**, and each appliance appears underneath with its commands as buttons on its own device, linked to the board. An appliance with nothing learned yet shows up too.
+- **Learning from the interface.** Open an appliance, choose **Manage appliance → Learn a command**, name the key and press it. The appliance is the one you opened, so the emitter is never in question, and the result says whether it worked, with **Try again**, **Learn a different command** and **Stop here** when it did not. Adding an appliance offers to learn its first key right away.
+- **The vane of an air conditioner.** The climate entity gains the vertical vane (fixed, swing, and five positions) and, when enabled, the horizontal one. Both are sent in the `IRHVAC` frame and read back from the physical remote. The vertical vane is off by default for the vendors where the firmware treats it as a toggle (`COOLIX`, `MIDEA`, `SHARP_AC` and a few others), because there every command would flip it.
+- **Air conditioner settings**: the model, the temperature range, the modes the unit really has, and which vanes it has. The model matters more than it looks: an LG read as `AKB75215403` never sends the vane, and the same unit set to `AKB74955603` does. The known models of each vendor are offered, and any other can be typed.
+- **Rename an appliance**, keeping its buttons, codes and emitter. Codes and entities hang off a key that never changes, so a rename is only a new title.
+- **Tests**, run against Home Assistant itself: adding an appliance and learning, learning from the menu and moving the emitter, a timeout, a duplicate name, learning through the action under a new name, the air conditioner flow, the vane payload, following the physical remote, the settings, the migration from 2026.9.5 and the clean-up after an appliance is deleted. A workflow runs them on every push, next to hassfest and the HACS validation.
+
+### Changed
+
+- **Home Assistant 2025.3 or newer is required**, for config subentries.
+- **The Configure menu is gone.** Everything it did now lives on the appliance itself. An existing install is migrated on the first start: each appliance becomes a subentry with the same emitter, the learned codes move with it, and **entity ids stay the same**, so no dashboard or automation notices. Friendly names lose the board prefix, because the device already carries the appliance name: `Hubb IR1 TV Quarto power` becomes `TV Quarto power`.
+- **Learning under a name that is not an appliance creates the appliance.** `remote.learn_command` still accepts any `device`, and the command no longer ends up somewhere the interface does not show.
+- **Deleting an appliance deletes its codes.** Before, removing an appliance left its codes behind, unreachable.
+- **Waiting for the remote is a progress screen.** It starts waiting the moment it opens, so the key is pressed with nothing to click in between, and it waits 30 seconds instead of 20.
+- **Commands to an air conditioner carry `Light`**, as the remote reported it, so an LG model that sends a separate display toggle whenever `Light` is off keeps its display as it was. Vendors where `Light` is itself a toggle do not get the key.
+
+### Fixed
+
+- **The air conditioner screen showed `{name}` instead of the name.** The translation wrapped the placeholder in apostrophes, and the frontend formats strings as ICU messages, where an apostrophe before a brace escapes it. No placeholder is quoted any more.
+- **The same screen said to press a key with the window open**, while the wait only started after **Submit**. Anyone who followed it pressed too early and got an error.
+- **A key pressed from too far away could be learned as nothing.** It arrived as a recognised protocol with zero bits, seen live as `SONY` from an LG air conditioner remote, and with `SetOption58` on it still carried `RawData`, so it passed as a raw capture. Such frames are now discarded, and they no longer fire the receiver event either.
+
 ## [2026.9.5] - 2026-09-21
 
 ### Added
@@ -68,7 +94,8 @@ about compatibility, only when it was published.
 - **Partial captures are discarded at capture time.** A truncated frame arrives with `Data` of `"0x"` and `Bits` of `0`, and storing one produces a command that is accepted, listed and reproduces nothing.
 - **Entities attach to the board's existing device.** The device info declares `connections={(CONNECTION_NETWORK_MAC, mac)}`, which is what the Tasmota integration uses, so the IR entities sit next to the board's diagnostics instead of forming a second device for the same hardware.
 
-[Unreleased]: https://github.com/self-labs/tasmota-ir/compare/v2026.9.5...HEAD
+[Unreleased]: https://github.com/self-labs/tasmota-ir/compare/v2026.9.6...HEAD
+[2026.9.6]: https://github.com/self-labs/tasmota-ir/compare/v2026.9.5...v2026.9.6
 [2026.9.5]: https://github.com/self-labs/tasmota-ir/compare/v2026.9.4...v2026.9.5
 [2026.9.4]: https://github.com/self-labs/tasmota-ir/compare/v2026.9.3...v2026.9.4
 [2026.9.3]: https://github.com/self-labs/tasmota-ir/compare/v2026.9.2...v2026.9.3
