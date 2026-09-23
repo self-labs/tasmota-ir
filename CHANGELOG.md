@@ -9,6 +9,17 @@ about compatibility, only when it was published.
 
 ## [Unreleased]
 
+## [2026.9.9] - 2026-09-23
+
+### Added
+
+- **The emitter is tried before it is saved.** Choosing one under **Change the emitter** sends something through it right away, the first learned command for an appliance and turn on for an air conditioner, and then asks whether it answered. Nothing on the board says where an emitter points, and an appliance on the wrong one fails in complete silence: the command is accepted, the board reports `Done`, and the signal leaves through a LED aimed somewhere else.
+
+### Changed
+
+- **The emitter is picked from a list that names who uses it**, `3: TV Quarto` rather than a bare `3`, instead of a number box. An appliance added and given the default emitter 1, while its LED is on another one, was exactly the trap.
+- **The menu of an appliance says which emitter it is on**, and the one of an air conditioner says vendor, model and emitter.
+
 ## [2026.9.8] - 2026-09-22
 
 ### Added
@@ -125,7 +136,8 @@ about compatibility, only when it was published.
 - **Partial captures are discarded at capture time.** A truncated frame arrives with `Data` of `"0x"` and `Bits` of `0`, and storing one produces a command that is accepted, listed and reproduces nothing.
 - **Entities attach to the board's existing device.** The device info declares `connections={(CONNECTION_NETWORK_MAC, mac)}`, which is what the Tasmota integration uses, so the IR entities sit next to the board's diagnostics instead of forming a second device for the same hardware.
 
-[Unreleased]: https://github.com/self-labs/tasmota-ir/compare/v2026.9.8...HEAD
+[Unreleased]: https://github.com/self-labs/tasmota-ir/compare/v2026.9.9...HEAD
+[2026.9.9]: https://github.com/self-labs/tasmota-ir/compare/v2026.9.8...v2026.9.9
 [2026.9.8]: https://github.com/self-labs/tasmota-ir/compare/v2026.9.7...v2026.9.8
 [2026.9.7]: https://github.com/self-labs/tasmota-ir/compare/v2026.9.6...v2026.9.7
 [2026.9.6]: https://github.com/self-labs/tasmota-ir/compare/v2026.9.5...v2026.9.6

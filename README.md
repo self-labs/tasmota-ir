@@ -125,11 +125,14 @@ a button that looks right and does nothing:
 | ---------------------------- | -------------------------------------------------------------- |
 | **Learn a command**          | name a key, press it, and a button appears                     |
 | **Delete a learned command** | forget one command, and its button with it                     |
-| **Change the emitter**       | every command of the appliance leaves through the new emitter  |
+| **Change the emitter**       | tries the emitter first, then asks whether it answered         |
 | **Rename**                   | a new name; buttons, codes and emitter stay as they are        |
 
 **Changing an emitter does not require learning anything again.** The code is
-stored per appliance and the emitter is looked up when it is sent.
+stored per appliance and the emitter is looked up when it is sent. The emitters
+are listed with the appliances already on them, and the one you pick is tried
+before it is saved: nothing on the board says where an emitter points, and an
+appliance on the wrong one fails in silence.
 
 **Deleting an appliance deletes its codes.** Use the three-dot menu of the
 appliance on the integration page.

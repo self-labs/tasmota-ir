@@ -39,7 +39,7 @@
           },
           "data_description": {
             "name": "O nome que aparece no dispositivo e que você usa como device nas ações do remote.",
-            "channel": "O emissor apontado para este aparelho, na ordem do template da placa. Dá para trocar depois sem aprender nada de novo."
+            "channel": "O emissor apontado para este aparelho, na ordem do template da placa. Os que já estão em uso mostram por qual aparelho. Dá para trocar depois, e testar, sem aprender nada de novo."
           }
         },
         "added": {
@@ -52,7 +52,7 @@
         },
         "reconfigure": {
           "title": "{name}",
-          "description": "O que você quer fazer com {name}?",
+          "description": "{name} está no emissor {channel}. O que você quer fazer?",
           "menu_options": {
             "learn": "Aprender comando",
             "delete_command": "Apagar comando aprendido",
@@ -117,9 +117,17 @@
         },
         "channel": {
           "title": "Trocar o emissor",
-          "description": "Todos os comandos de {name} passam a sair pelo emissor novo. Nada precisa ser aprendido de novo.",
+          "description": "Hoje {name} está no emissor {channel}. Escolha outro e ele é testado antes de salvar: os emissores já usados mostram por qual aparelho.",
           "data": {
             "channel": "Emissor"
+          }
+        },
+        "channel_test": {
+          "title": "Respondeu?",
+          "description": "Acabei de mandar {command} para {name} pelo emissor {channel}. O aparelho respondeu?",
+          "menu_options": {
+            "channel_save": "Sim, usar esse emissor",
+            "channel": "Não, tentar outro emissor"
           }
         },
         "rename": {
@@ -162,7 +170,7 @@
             "channel": "Emissor"
           },
           "data_description": {
-            "channel": "O emissor apontado para este aparelho, na ordem do template da placa. Dá para trocar depois sem aprender nada de novo."
+            "channel": "O emissor apontado para este aparelho, na ordem do template da placa. Os que já estão em uso mostram por qual aparelho. Dá para trocar depois, e testar, sem aprender nada de novo."
           }
         },
         "read_remote": {
@@ -175,7 +183,7 @@
         },
         "reconfigure": {
           "title": "{name}",
-          "description": "{vendor}, modelo {model}. O que você quer fazer?",
+          "description": "{vendor}, modelo {model}, emissor {channel}. O que você quer fazer?",
           "menu_options": {
             "settings": "Ajustes",
             "read_remote": "Ler o controle de novo",
@@ -203,9 +211,17 @@
         },
         "channel": {
           "title": "Trocar o emissor",
-          "description": "Todos os comandos de {name} passam a sair pelo emissor novo. Nada precisa ser aprendido de novo.",
+          "description": "Hoje {name} está no emissor {channel}. Escolha outro e ele é testado antes de salvar: os emissores já usados mostram por qual aparelho.",
           "data": {
             "channel": "Emissor"
+          }
+        },
+        "channel_test": {
+          "title": "Respondeu?",
+          "description": "Acabei de mandar ligar para {name} pelo emissor {channel}. O aparelho respondeu?",
+          "menu_options": {
+            "channel_save": "Sim, usar esse emissor",
+            "channel": "Não, tentar outro emissor"
           }
         },
         "rename": {

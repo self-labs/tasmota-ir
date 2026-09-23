@@ -95,7 +95,9 @@ class TasmotaIrCoordinator:
         self._unsubscribes: list[Callable[[], None]] = []
         # Each waiter is a future plus what it is waiting for, if anything.
         self._ir_waiters: list[
-            tuple[asyncio.Future[dict[str, Any]], Callable[[dict[str, Any]], bool] | None]
+            tuple[
+                asyncio.Future[dict[str, Any]], Callable[[dict[str, Any]], bool] | None
+            ]
         ] = []
 
     # ------------------------------------------------------------------

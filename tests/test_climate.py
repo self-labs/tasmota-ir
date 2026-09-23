@@ -18,7 +18,7 @@ async def _add_ac(hass: HomeAssistant, entry) -> None:
     )
     assert result["type"] is FlowResultType.FORM
     result = await manager.async_configure(
-        result["flow_id"], {"name": "Ar Escritorio", "channel": 4}
+        result["flow_id"], {"name": "Ar Escritorio", "channel": "4"}
     )
     assert result["type"] is FlowResultType.SHOW_PROGRESS
     assert result["description_placeholders"]["name"] == "Ar Escritorio"
@@ -41,7 +41,7 @@ async def test_noise_does_not_end_the_wait(hass: HomeAssistant, mqtt_mock) -> No
         (entry.entry_id, "climate"), context={"source": SOURCE_USER}
     )
     result = await manager.async_configure(
-        result["flow_id"], {"name": "Ar Escritorio", "channel": 4}
+        result["flow_id"], {"name": "Ar Escritorio", "channel": "4"}
     )
     assert result["type"] is FlowResultType.SHOW_PROGRESS
 
@@ -190,6 +190,46 @@ async def test_an_off_frame_keeps_the_setpoint(hass: HomeAssistant, mqtt_mock) -
     state = hass.states.get("climate.ar_escritorio")
     assert state.state == "off"
     assert state.attributes["temperature"] == 23
+
+
+async def test_changing_the_emitter_tries_it_first(
+    hass: HomeAssistant, mqtt_mock
+) -> None:
+    """The unit is turned on through the emitter being tried, then it is asked.
+
+    Nothing on the board says where an emitter points, and an appliance on the
+    wrong one fails in silence, which is how an air conditioner ended up on the
+    emitter aimed at a television.
+    """
+    entry = await setup_board(hass, board_entry())
+    await _add_ac(hass, entry)
+    (subentry,) = entry.subentries.values()
+    manager = hass.config_entries.subentries
+
+    result = await manager.async_init(
+        (entry.entry_id, "climate"),
+        context={"source": SOURCE_RECONFIGURE, "subentry_id": subentry.subentry_id},
+    )
+    result = await manager.async_configure(
+        result["flow_id"], {"next_step_id": "channel"}
+    )
+    mqtt_mock.async_publish.reset_mock()
+    result = await manager.async_configure(result["flow_id"], {"channel": "3"})
+
+    assert result["type"] is FlowResultType.MENU
+    assert result["step_id"] == "channel_test"
+    topic, payload = mqtt_mock.async_publish.call_args.args[:2]
+    assert topic == f"cmnd/{TOPIC}/IRHVAC"
+    body = json.loads(payload)
+    assert body["Channel"] == 3
+    assert body["Power"] == "On"
+
+    result = await manager.async_configure(
+        result["flow_id"], {"next_step_id": "channel_save"}
+    )
+    assert result["type"] is FlowResultType.ABORT
+    await hass.async_block_till_done()
+    assert hass.states.get("climate.ar_escritorio").attributes["emitter"] == 3
 
 
 async def test_settings_change_the_model_and_the_modes(

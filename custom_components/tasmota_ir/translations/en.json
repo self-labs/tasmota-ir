@@ -39,7 +39,7 @@
           },
           "data_description": {
             "name": "The name you will see on the device and use as device in the remote actions.",
-            "channel": "The emitter pointed at this appliance, counted in the order of the board template. It can be changed later without learning anything again."
+            "channel": "The emitter pointed at this appliance, counted in the order of the board template. The ones already in use say which appliance is on them. It can be changed later, and tried, without learning anything again."
           }
         },
         "added": {
@@ -52,7 +52,7 @@
         },
         "reconfigure": {
           "title": "{name}",
-          "description": "What do you want to do with {name}?",
+          "description": "{name} is on emitter {channel}. What do you want to do?",
           "menu_options": {
             "learn": "Learn a command",
             "delete_command": "Delete a learned command",
@@ -117,9 +117,17 @@
         },
         "channel": {
           "title": "Change the emitter",
-          "description": "Every command of {name} leaves through the new emitter from now on. Nothing has to be learned again.",
+          "description": "{name} is on emitter {channel} today. Pick another one and it is tried before anything is saved: the emitters already in use say which appliance is on them.",
           "data": {
             "channel": "Emitter"
+          }
+        },
+        "channel_test": {
+          "title": "Did it answer?",
+          "description": "{command} was just sent to {name} through emitter {channel}. Did the appliance answer?",
+          "menu_options": {
+            "channel_save": "Yes, use this emitter",
+            "channel": "No, try another emitter"
           }
         },
         "rename": {
@@ -162,7 +170,7 @@
             "channel": "Emitter"
           },
           "data_description": {
-            "channel": "The emitter pointed at this appliance, counted in the order of the board template. It can be changed later without learning anything again."
+            "channel": "The emitter pointed at this appliance, counted in the order of the board template. The ones already in use say which appliance is on them. It can be changed later, and tried, without learning anything again."
           }
         },
         "read_remote": {
@@ -175,7 +183,7 @@
         },
         "reconfigure": {
           "title": "{name}",
-          "description": "{vendor}, model {model}. What do you want to do?",
+          "description": "{vendor}, model {model}, emitter {channel}. What do you want to do?",
           "menu_options": {
             "settings": "Settings",
             "read_remote": "Read the remote again",
@@ -203,9 +211,17 @@
         },
         "channel": {
           "title": "Change the emitter",
-          "description": "Every command of {name} leaves through the new emitter from now on. Nothing has to be learned again.",
+          "description": "{name} is on emitter {channel} today. Pick another one and it is tried before anything is saved: the emitters already in use say which appliance is on them.",
           "data": {
             "channel": "Emitter"
+          }
+        },
+        "channel_test": {
+          "title": "Did it answer?",
+          "description": "Turn on was just sent to {name} through emitter {channel}. Did the unit answer?",
+          "menu_options": {
+            "channel_save": "Yes, use this emitter",
+            "channel": "No, try another emitter"
           }
         },
         "rename": {

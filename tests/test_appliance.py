@@ -42,7 +42,7 @@ async def test_add_an_appliance_and_learn_its_first_key(
     )
     assert result["type"] is FlowResultType.FORM
     result = await manager.async_configure(
-        result["flow_id"], {"name": "TV Quarto", "channel": 3}
+        result["flow_id"], {"name": "TV Quarto", "channel": "3"}
     )
     assert result["type"] is FlowResultType.MENU
     assert result["step_id"] == "added"
@@ -89,7 +89,7 @@ async def test_an_appliance_with_nothing_learned_still_shows_up(
         (entry.entry_id, "appliance"), context={"source": SOURCE_USER}
     )
     result = await manager.async_configure(
-        result["flow_id"], {"name": "JBL Soundbar", "channel": 2}
+        result["flow_id"], {"name": "JBL Soundbar", "channel": "2"}
     )
     result = await manager.async_configure(
         result["flow_id"], {"next_step_id": "finish"}
@@ -113,7 +113,7 @@ async def test_learn_from_the_appliance_menu_and_move_it(
         board_entry(
             subentries_data=(
                 {
-                    "data": {"channel": 1},
+                    "data": {"channel": "1"},
                     "subentry_type": "appliance",
                     "title": "TV Quarto",
                     "unique_id": "tvkey",
@@ -145,7 +145,18 @@ async def test_learn_from_the_appliance_menu_and_move_it(
     result = await manager.async_configure(
         result["flow_id"], {"next_step_id": "channel"}
     )
-    result = await manager.async_configure(result["flow_id"], {"channel": 5})
+    mqtt_mock.async_publish.reset_mock()
+    result = await manager.async_configure(result["flow_id"], {"channel": "5"})
+
+    # Choosing an emitter tries it before saving: whether it points at the
+    # appliance cannot be read from the board, only seen on the appliance.
+    assert result["type"] is FlowResultType.MENU
+    assert result["step_id"] == "channel_test"
+    assert json.loads(mqtt_mock.async_publish.call_args.args[1])["Channel"] == 5
+
+    result = await manager.async_configure(
+        result["flow_id"], {"next_step_id": "channel_save"}
+    )
     assert result["type"] is FlowResultType.ABORT
     await hass.async_block_till_done()
 
@@ -164,7 +175,7 @@ async def test_a_timeout_offers_to_try_again(hass: HomeAssistant, mqtt_mock) -> 
         (entry.entry_id, "appliance"), context={"source": SOURCE_USER}
     )
     result = await manager.async_configure(
-        result["flow_id"], {"name": "TV", "channel": 1}
+        result["flow_id"], {"name": "TV", "channel": "1"}
     )
     result = await manager.async_configure(result["flow_id"], {"next_step_id": "learn"})
     flow = manager._progress[result["flow_id"]]
@@ -188,7 +199,7 @@ async def test_a_duplicate_name_is_refused(hass: HomeAssistant, mqtt_mock) -> No
         board_entry(
             subentries_data=(
                 {
-                    "data": {"channel": 1},
+                    "data": {"channel": "1"},
                     "subentry_type": "appliance",
                     "title": "TV Quarto",
                     "unique_id": "tvkey",
@@ -201,7 +212,7 @@ async def test_a_duplicate_name_is_refused(hass: HomeAssistant, mqtt_mock) -> No
         (entry.entry_id, "appliance"), context={"source": SOURCE_USER}
     )
     result = await manager.async_configure(
-        result["flow_id"], {"name": "tv quarto", "channel": 2}
+        result["flow_id"], {"name": "tv quarto", "channel": "2"}
     )
     assert result["type"] is FlowResultType.FORM
     assert result["errors"] == {"name": "name_taken"}

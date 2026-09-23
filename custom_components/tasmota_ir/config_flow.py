@@ -35,6 +35,7 @@ from homeassistant.core import callback
 from homeassistant.helpers import selector
 
 from .const import (
+    CMND_IRHVAC,
     CONF_CHANNEL,
     CONF_CHANNELS,
     CONF_FULL_TOPIC,
@@ -251,6 +252,7 @@ class _TasmotaIrSubentryFlow(ConfigSubentryFlow):
         """Nothing chosen yet."""
         self._name: str = ""
         self._channel: int = 1
+        self._probe_name: str = ""
         self._key: str = ""
         self._learn_task: asyncio.Task[dict[str, Any] | None] | None = None
         self._received: dict[str, Any] | None = None
@@ -264,15 +266,36 @@ class _TasmotaIrSubentryFlow(ConfigSubentryFlow):
             return None
         return entry.runtime_data
 
-    def _channel_selector(self) -> selector.NumberSelector:
-        """Offer only the emitters the board reported."""
-        channels = int(self._get_entry().data.get(CONF_CHANNELS, 1))
-        return selector.NumberSelector(
-            selector.NumberSelectorConfig(
-                min=1,
-                max=min(channels, MAX_CHANNELS),
-                step=1,
-                mode=selector.NumberSelectorMode.BOX,
+    def _channel_selector(self, ignore: str | None = None) -> selector.SelectSelector:
+        """Offer the emitters the board reported, and say who uses each.
+
+        A bare number is a guess: there is nothing on the board to read, and an
+        appliance pointed at the wrong emitter fails silently. Naming the
+        appliances already on each emitter turns the guess into a choice.
+        """
+        entry = self._get_entry()
+        channels = min(int(entry.data.get(CONF_CHANNELS, 1)), MAX_CHANNELS)
+        taken: dict[int, list[str]] = {}
+        for sub_id, subentry in entry.subentries.items():
+            if sub_id == ignore:
+                continue
+            channel = int(subentry.data.get(CONF_CHANNEL, 0))
+            if channel:
+                taken.setdefault(channel, []).append(subentry.title)
+        options = [
+            selector.SelectOptionDict(
+                value=str(channel),
+                label=(
+                    f"{channel}: {', '.join(sorted(taken[channel]))}"
+                    if channel in taken
+                    else str(channel)
+                ),
+            )
+            for channel in range(1, channels + 1)
+        ]
+        return selector.SelectSelector(
+            selector.SelectSelectorConfig(
+                options=options, mode=selector.SelectSelectorMode.LIST
             )
         )
 
@@ -325,22 +348,57 @@ class _TasmotaIrSubentryFlow(ConfigSubentryFlow):
         """Move the appliance to another emitter. Nothing has to be relearned."""
         subentry = self._get_reconfigure_subentry()
         if user_input is not None:
-            return self.async_update_and_abort(
-                self._get_entry(),
-                subentry,
-                data_updates={CONF_CHANNEL: int(user_input[CONF_CHANNEL])},
-            )
+            self._channel = int(user_input[CONF_CHANNEL])
+            if await self._async_probe(self._channel):
+                return await self.async_step_channel_test()
+            return await self.async_step_channel_save()
         return self.async_show_form(
             step_id="channel",
             data_schema=vol.Schema(
                 {
                     vol.Required(
-                        CONF_CHANNEL, default=int(subentry.data.get(CONF_CHANNEL, 1))
-                    ): self._channel_selector()
+                        CONF_CHANNEL, default=str(subentry.data.get(CONF_CHANNEL, 1))
+                    ): self._channel_selector(ignore=subentry.subentry_id)
                 }
             ),
-            description_placeholders={"name": subentry.title},
+            description_placeholders={
+                "name": subentry.title,
+                "channel": str(subentry.data.get(CONF_CHANNEL, 1)),
+            },
         )
+
+    async def async_step_channel_test(
+        self, user_input: dict[str, Any] | None = None
+    ) -> SubentryFlowResult:
+        """Ask whether the appliance answered what was just sent through it."""
+        return self.async_show_menu(
+            step_id="channel_test",
+            menu_options=["channel_save", "channel"],
+            description_placeholders={
+                "name": self._name,
+                "channel": str(self._channel),
+                "command": self._probe_name,
+            },
+        )
+
+    async def async_step_channel_save(
+        self, user_input: dict[str, Any] | None = None
+    ) -> SubentryFlowResult:
+        """Keep the emitter that was chosen."""
+        return self.async_update_and_abort(
+            self._get_entry(),
+            self._get_reconfigure_subentry(),
+            data_updates={CONF_CHANNEL: self._channel},
+        )
+
+    async def _async_probe(self, channel: int) -> bool:
+        """Send something through an emitter. False when there is nothing to send.
+
+        Whether the emitter points at the appliance cannot be read from the
+        board, only seen on the appliance, so the flow sends one command and
+        asks.
+        """
+        return False
 
     async def async_step_rename(
         self, user_input: dict[str, Any] | None = None
@@ -406,7 +464,7 @@ class ApplianceSubentryFlow(_TasmotaIrSubentryFlow):
             data_schema=vol.Schema(
                 {
                     vol.Required(CONF_NAME): str,
-                    vol.Required(CONF_CHANNEL, default=1): self._channel_selector(),
+                    vol.Required(CONF_CHANNEL, default="1"): self._channel_selector(),
                 }
             ),
             errors=errors,
@@ -431,11 +489,33 @@ class ApplianceSubentryFlow(_TasmotaIrSubentryFlow):
         subentry = self._get_reconfigure_subentry()
         self._name = subentry.title
         self._key = subentry.unique_id or ""
+        self._channel = int(subentry.data.get(CONF_CHANNEL, 1))
         return self.async_show_menu(
             step_id="reconfigure",
             menu_options=["learn", "delete_command", "channel", "rename"],
-            description_placeholders={"name": self._name},
+            description_placeholders={
+                "name": self._name,
+                "channel": str(self._channel),
+            },
         )
+
+    async def _async_probe(self, channel: int) -> bool:
+        """Send the first learned command through the emitter being tried."""
+        coordinator = self._coordinator()
+        if coordinator is None:
+            return False
+        commands = coordinator.commands_of(self._key)
+        if not commands:
+            return False
+        self._probe_name = commands[0]
+        code = coordinator.get_code(self._key, commands[0])
+        if code is None:
+            return False
+        try:
+            await coordinator.async_send_code(code, channel=channel)
+        except CodeTooLargeError:
+            return False
+        return True
 
     async def async_step_delete_command(
         self, user_input: dict[str, Any] | None = None
@@ -623,7 +703,7 @@ class ClimateSubentryFlow(_TasmotaIrSubentryFlow):
             data_schema=vol.Schema(
                 {
                     vol.Required(CONF_NAME): str,
-                    vol.Required(CONF_CHANNEL, default=1): self._channel_selector(),
+                    vol.Required(CONF_CHANNEL, default="1"): self._channel_selector(),
                 }
             ),
             errors=errors,
@@ -693,6 +773,7 @@ class ClimateSubentryFlow(_TasmotaIrSubentryFlow):
         subentry = self._get_reconfigure_subentry()
         self._name = subentry.title
         self._key = subentry.unique_id or ""
+        self._channel = int(subentry.data.get(CONF_CHANNEL, 1))
         return self.async_show_menu(
             step_id="reconfigure",
             menu_options=["settings", "read_remote", "channel", "rename"],
@@ -700,8 +781,33 @@ class ClimateSubentryFlow(_TasmotaIrSubentryFlow):
                 "name": self._name,
                 "vendor": subentry.data.get(CONF_VENDOR, ""),
                 "model": subentry.data.get(CONF_MODEL, "") or "-",
+                "channel": str(self._channel),
             },
         )
+
+    async def _async_probe(self, channel: int) -> bool:
+        """Turn the unit on through the emitter being tried.
+
+        An air conditioner has no learned command to replay, and turning it on
+        is the one thing that can be seen from across the room.
+        """
+        coordinator = self._coordinator()
+        if coordinator is None:
+            return False
+        data = self._get_reconfigure_subentry().data
+        self._probe_name = "on"
+        payload: dict[str, Any] = {
+            CONF_VENDOR.capitalize(): data.get(CONF_VENDOR, ""),
+            "Power": "On",
+            "Mode": "Cool",
+            "Temp": int(data.get(CONF_MAX_TEMP, DEFAULT_MAX_TEMP)),
+            "FanSpeed": "Auto",
+            "Celsius": "On",
+        }
+        if model := data.get(CONF_MODEL):
+            payload["Model"] = model
+        await coordinator.async_send_json(CMND_IRHVAC, payload, channel=channel)
+        return True
 
     async def async_step_settings(
         self, user_input: dict[str, Any] | None = None
