@@ -57,7 +57,9 @@
             "learn": "Learn a command",
             "delete_command": "Delete a learned command",
             "channel": "Change the emitter",
-            "rename": "Rename"
+            "rename": "Rename",
+            "move": "Move to another board",
+            "copy": "Copy to another board"
           }
         },
         "learn": {
@@ -136,6 +138,36 @@
           "data": {
             "name": "Name"
           }
+        },
+        "move": {
+          "title": "Move to another board",
+          "description": "Which board should {name} go to?",
+          "data": {
+            "board": "Board"
+          }
+        },
+        "copy": {
+          "title": "Copy to another board",
+          "description": "Which board gets a copy of {name}?",
+          "data": {
+            "board": "Board"
+          }
+        },
+        "move_target": {
+          "title": "Move to another board",
+          "description": "{name} goes to {board} with every learned command, and its buttons keep their entity ids, names and areas. Pick the emitter there: the emitters already in use say which appliance is on them.",
+          "data": {
+            "channel": "Emitter",
+            "name": "Name"
+          }
+        },
+        "copy_target": {
+          "title": "Copy to another board",
+          "description": "{board} gets its own {name}, with every learned command, and this one stays as it is. Pick the emitter there: the emitters already in use say which appliance is on them.",
+          "data": {
+            "channel": "Emitter",
+            "name": "Name"
+          }
         }
       },
       "progress": {
@@ -152,7 +184,10 @@
         "no_commands": "Nothing has been learned for this appliance yet.",
         "command_deleted": "{command} was deleted, together with its button.",
         "done": "Done.",
-        "reconfigure_successful": "Saved."
+        "reconfigure_successful": "Saved.",
+        "moved": "{name} is now on {board}, emitter {channel}.",
+        "copied": "{board} now has {name} too, on emitter {channel}.",
+        "no_other_board": "There is no other board to send it to. Add that board to Tasmota IR first."
       }
     },
     "climate": {
@@ -188,7 +223,9 @@
             "settings": "Settings",
             "read_remote": "Read the remote again",
             "channel": "Change the emitter",
-            "rename": "Rename"
+            "rename": "Rename",
+            "move": "Move to another board",
+            "copy": "Copy to another board"
           }
         },
         "settings": {
@@ -230,6 +267,36 @@
           "data": {
             "name": "Name"
           }
+        },
+        "move": {
+          "title": "Move to another board",
+          "description": "Which board should {name} go to?",
+          "data": {
+            "board": "Board"
+          }
+        },
+        "copy": {
+          "title": "Copy to another board",
+          "description": "Which board gets a copy of {name}?",
+          "data": {
+            "board": "Board"
+          }
+        },
+        "move_target": {
+          "title": "Move to another board",
+          "description": "{name} goes to {board} with its settings, and keeps its entity id, name and area. Pick the emitter there: the emitters already in use say which appliance is on them.",
+          "data": {
+            "channel": "Emitter",
+            "name": "Name"
+          }
+        },
+        "copy_target": {
+          "title": "Copy to another board",
+          "description": "{board} gets its own {name}, with the same settings, and this one stays as it is. Pick the emitter there: the emitters already in use say which appliance is on them.",
+          "data": {
+            "channel": "Emitter",
+            "name": "Name"
+          }
         }
       },
       "progress": {
@@ -245,7 +312,10 @@
       "abort": {
         "board_not_loaded": "The board is not running right now. Check that it is online, then try again.",
         "no_receiver": "This board has no IRrecv GPIO assigned, so it cannot learn. Assign one in the Tasmota template and reload the integration.",
-        "reconfigure_successful": "Saved."
+        "reconfigure_successful": "Saved.",
+        "moved": "{name} is now on {board}, emitter {channel}.",
+        "copied": "{board} now has {name} too, on emitter {channel}.",
+        "no_other_board": "There is no other board to send it to. Add that board to Tasmota IR first."
       }
     }
   },

@@ -121,12 +121,22 @@ a button that looks right and does nothing:
 
 **Manage appliance** on any appliance offers:
 
-| Entry                        | What it does                                                   |
-| ---------------------------- | -------------------------------------------------------------- |
-| **Learn a command**          | name a key, press it, and a button appears                     |
-| **Delete a learned command** | forget one command, and its button with it                     |
-| **Change the emitter**       | tries the emitter first, then asks whether it answered         |
-| **Rename**                   | a new name; buttons, codes and emitter stay as they are        |
+| Entry                        | What it does                                                    |
+| ---------------------------- | --------------------------------------------------------------- |
+| **Learn a command**          | name a key, press it, and a button appears                      |
+| **Delete a learned command** | forget one command, and its button with it                      |
+| **Change the emitter**       | tries the emitter first, then asks whether it answered          |
+| **Rename**                   | a new name; buttons, codes and emitter stay as they are         |
+| **Move to another board**    | the appliance leaves this board with its codes, entity ids kept |
+| **Copy to another board**    | the other board gets its own appliance, this one stays          |
+
+**Moving to another board does not require learning anything again either.** A
+learned code is the infrared signal itself, and every Tasmota board sends it the
+same way. Moving keeps the appliance's key, so its buttons come back with the
+same entity ids, names and areas, and dashboards and automations keep working;
+only the emitter is asked again, because the other board has its own. Copying
+gives the other board an appliance of its own, with new entities, for the same
+kind of TV in two rooms. Air conditioners move and copy too, with their settings.
 
 **Changing an emitter does not require learning anything again.** The code is
 stored per appliance and the emitter is looked up when it is sent. The emitters

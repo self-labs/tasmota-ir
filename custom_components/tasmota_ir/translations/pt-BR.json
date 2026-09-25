@@ -57,7 +57,9 @@
             "learn": "Aprender comando",
             "delete_command": "Apagar comando aprendido",
             "channel": "Trocar o emissor",
-            "rename": "Renomear"
+            "rename": "Renomear",
+            "move": "Mover para outra placa",
+            "copy": "Copiar para outra placa"
           }
         },
         "learn": {
@@ -136,6 +138,36 @@
           "data": {
             "name": "Nome"
           }
+        },
+        "move": {
+          "title": "Mover para outra placa",
+          "description": "Para qual placa {name} vai?",
+          "data": {
+            "board": "Placa"
+          }
+        },
+        "copy": {
+          "title": "Copiar para outra placa",
+          "description": "Qual placa recebe uma cópia de {name}?",
+          "data": {
+            "board": "Placa"
+          }
+        },
+        "move_target": {
+          "title": "Mover para outra placa",
+          "description": "{name} vai para {board} com todos os comandos aprendidos, e os botões continuam com os mesmos IDs de entidade, nomes e áreas. Escolha o emissor lá: os emissores já usados mostram por qual aparelho.",
+          "data": {
+            "channel": "Emissor",
+            "name": "Nome"
+          }
+        },
+        "copy_target": {
+          "title": "Copiar para outra placa",
+          "description": "{board} ganha o seu próprio {name}, com todos os comandos aprendidos, e este continua como está. Escolha o emissor lá: os emissores já usados mostram por qual aparelho.",
+          "data": {
+            "channel": "Emissor",
+            "name": "Nome"
+          }
         }
       },
       "progress": {
@@ -152,7 +184,10 @@
         "no_commands": "Nada foi aprendido para este aparelho ainda.",
         "command_deleted": "{command} foi apagado, junto com o botão.",
         "done": "Pronto.",
-        "reconfigure_successful": "Salvo."
+        "reconfigure_successful": "Salvo.",
+        "moved": "{name} agora está na {board}, no emissor {channel}.",
+        "copied": "A {board} agora também tem {name}, no emissor {channel}.",
+        "no_other_board": "Não há outra placa para onde levar. Adicione essa placa ao Tasmota IR primeiro."
       }
     },
     "climate": {
@@ -188,7 +223,9 @@
             "settings": "Ajustes",
             "read_remote": "Ler o controle de novo",
             "channel": "Trocar o emissor",
-            "rename": "Renomear"
+            "rename": "Renomear",
+            "move": "Mover para outra placa",
+            "copy": "Copiar para outra placa"
           }
         },
         "settings": {
@@ -230,6 +267,36 @@
           "data": {
             "name": "Nome"
           }
+        },
+        "move": {
+          "title": "Mover para outra placa",
+          "description": "Para qual placa {name} vai?",
+          "data": {
+            "board": "Placa"
+          }
+        },
+        "copy": {
+          "title": "Copiar para outra placa",
+          "description": "Qual placa recebe uma cópia de {name}?",
+          "data": {
+            "board": "Placa"
+          }
+        },
+        "move_target": {
+          "title": "Mover para outra placa",
+          "description": "{name} vai para {board} com as configurações, e continua com o mesmo ID de entidade, nome e área. Escolha o emissor lá: os emissores já usados mostram por qual aparelho.",
+          "data": {
+            "channel": "Emissor",
+            "name": "Nome"
+          }
+        },
+        "copy_target": {
+          "title": "Copiar para outra placa",
+          "description": "{board} ganha o seu próprio {name}, com as mesmas configurações, e este continua como está. Escolha o emissor lá: os emissores já usados mostram por qual aparelho.",
+          "data": {
+            "channel": "Emissor",
+            "name": "Nome"
+          }
         }
       },
       "progress": {
@@ -245,7 +312,10 @@
       "abort": {
         "board_not_loaded": "A placa não está rodando agora. Confira se ela está online e tente de novo.",
         "no_receiver": "Esta placa não tem GPIO de IRrecv, então não consegue aprender. Atribua um no template do Tasmota e recarregue a integração.",
-        "reconfigure_successful": "Salvo."
+        "reconfigure_successful": "Salvo.",
+        "moved": "{name} agora está na {board}, no emissor {channel}.",
+        "copied": "A {board} agora também tem {name}, no emissor {channel}.",
+        "no_other_board": "Não há outra placa para onde levar. Adicione essa placa ao Tasmota IR primeiro."
       }
     }
   },

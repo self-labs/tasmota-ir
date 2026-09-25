@@ -9,6 +9,12 @@ about compatibility, only when it was published.
 
 ## [Unreleased]
 
+## [2026.9.11] - 2026-09-25
+
+### Added
+
+- **Move an appliance to another board, or copy it there.** **Manage appliance** gains **Move to another board** and **Copy to another board**, for appliances and air conditioners alike. The board is picked from the other ones that are up, skipped when there is only one, and the emitter and the name are asked there, since the other board has its own emitters and its own names. Nothing is learned again: a code is the infrared signal itself. A move keeps the appliance key, so its buttons and climate entity come back with the same unique ids, and Home Assistant restores their entity ids, names and areas from the ones the old board removed: dashboards and automations keep working. A copy gets a key and entities of its own. The codes are written to the other board before its subentry is added, because adding it reloads that board and a reload drops codes nobody owns. Six tests: a move with a renamed button, a copy, a name already taken there, no other board, an air conditioner, and the board chosen among several.
+
 ## [2026.9.10] - 2026-09-25
 
 ### Changed
@@ -142,7 +148,8 @@ about compatibility, only when it was published.
 - **Partial captures are discarded at capture time.** A truncated frame arrives with `Data` of `"0x"` and `Bits` of `0`, and storing one produces a command that is accepted, listed and reproduces nothing.
 - **Entities attach to the board's existing device.** The device info declares `connections={(CONNECTION_NETWORK_MAC, mac)}`, which is what the Tasmota integration uses, so the IR entities sit next to the board's diagnostics instead of forming a second device for the same hardware.
 
-[Unreleased]: https://github.com/self-labs/tasmota-ir/compare/v2026.9.10...HEAD
+[Unreleased]: https://github.com/self-labs/tasmota-ir/compare/v2026.9.11...HEAD
+[2026.9.11]: https://github.com/self-labs/tasmota-ir/compare/v2026.9.10...v2026.9.11
 [2026.9.10]: https://github.com/self-labs/tasmota-ir/compare/v2026.9.9...v2026.9.10
 [2026.9.9]: https://github.com/self-labs/tasmota-ir/compare/v2026.9.8...v2026.9.9
 [2026.9.8]: https://github.com/self-labs/tasmota-ir/compare/v2026.9.7...v2026.9.8

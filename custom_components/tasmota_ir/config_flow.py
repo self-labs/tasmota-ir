@@ -14,9 +14,11 @@ appliance is chosen by opening it, so the emitter is never in question.
 from __future__ import annotations
 
 import asyncio
+import copy
 import json
 import logging
 from collections.abc import Callable
+from types import MappingProxyType
 from typing import Any
 from uuid import uuid4
 
@@ -28,6 +30,7 @@ from homeassistant.config_entries import (
     ConfigEntryState,
     ConfigFlow,
     ConfigFlowResult,
+    ConfigSubentry,
     ConfigSubentryFlow,
     SubentryFlowResult,
 )
@@ -79,6 +82,7 @@ MANUAL = "__manual__"
 
 CONF_NAME = "name"
 CONF_COMMAND = "command"
+CONF_BOARD = "board"
 
 HVAC_MODE_OPTIONS = ["off", "cool", "heat", "dry", "fan_only", "auto"]
 
@@ -256,6 +260,7 @@ class _TasmotaIrSubentryFlow(ConfigSubentryFlow):
         self._key: str = ""
         self._learn_task: asyncio.Task[dict[str, Any] | None] | None = None
         self._received: dict[str, Any] | None = None
+        self._target_id: str = ""
 
     # ---- helpers -------------------------------------------------------
 
@@ -266,14 +271,17 @@ class _TasmotaIrSubentryFlow(ConfigSubentryFlow):
             return None
         return entry.runtime_data
 
-    def _channel_selector(self, ignore: str | None = None) -> selector.SelectSelector:
+    def _channel_selector(
+        self, ignore: str | None = None, entry: ConfigEntry | None = None
+    ) -> selector.SelectSelector:
         """Offer the emitters the board reported, and say who uses each.
 
         A bare number is a guess: there is nothing on the board to read, and an
         appliance pointed at the wrong emitter fails silently. Naming the
         appliances already on each emitter turns the guess into a choice.
+        ``entry`` is another board, for an appliance on its way there.
         """
-        entry = self._get_entry()
+        entry = entry or self._get_entry()
         channels = min(int(entry.data.get(CONF_CHANNELS, 1)), MAX_CHANNELS)
         taken: dict[int, list[str]] = {}
         for sub_id, subentry in entry.subentries.items():
@@ -299,12 +307,14 @@ class _TasmotaIrSubentryFlow(ConfigSubentryFlow):
             )
         )
 
-    def _name_taken(self, name: str, ignore: str | None = None) -> bool:
-        """Whether another appliance of this board already has this name."""
+    def _name_taken(
+        self, name: str, ignore: str | None = None, entry: ConfigEntry | None = None
+    ) -> bool:
+        """Whether another appliance of this board, or of ``entry``, has this name."""
         wanted = name.strip().casefold()
         return any(
             sub.title.strip().casefold() == wanted
-            for sub_id, sub in self._get_entry().subentries.items()
+            for sub_id, sub in (entry or self._get_entry()).subentries.items()
             if sub_id != ignore
         )
 
@@ -424,6 +434,159 @@ class _TasmotaIrSubentryFlow(ConfigSubentryFlow):
             errors=errors,
         )
 
+    # ---- moving or copying to another board, shared by both kinds -----
+
+    def _other_boards(self) -> dict[str, ConfigEntry]:
+        """The other boards that are up, by entry id."""
+        source = self._get_entry().entry_id
+        return {
+            entry.entry_id: entry
+            for entry in self.hass.config_entries.async_entries(DOMAIN)
+            if entry.entry_id != source and entry.state is ConfigEntryState.LOADED
+        }
+
+    async def async_step_move(
+        self, user_input: dict[str, Any] | None = None
+    ) -> SubentryFlowResult:
+        """Move the appliance to another board, codes and entity ids included."""
+        return await self._async_step_pick_board("move", user_input)
+
+    async def async_step_copy(
+        self, user_input: dict[str, Any] | None = None
+    ) -> SubentryFlowResult:
+        """Put a copy of the appliance on another board, keeping this one."""
+        return await self._async_step_pick_board("copy", user_input)
+
+    async def async_step_move_target(
+        self, user_input: dict[str, Any] | None = None
+    ) -> SubentryFlowResult:
+        """Pick the emitter, and the name, the appliance will have there."""
+        return await self._async_step_target("move_target", user_input, keep=False)
+
+    async def async_step_copy_target(
+        self, user_input: dict[str, Any] | None = None
+    ) -> SubentryFlowResult:
+        """Pick the emitter, and the name, the copy will have there."""
+        return await self._async_step_target("copy_target", user_input, keep=True)
+
+    async def _async_step_pick_board(
+        self, action: str, user_input: dict[str, Any] | None
+    ) -> SubentryFlowResult:
+        """Choose the board. With only one other, there is nothing to choose."""
+        boards = self._other_boards()
+        if not boards:
+            return self.async_abort(reason="no_other_board")
+        if user_input is not None or len(boards) == 1:
+            self._target_id = (
+                user_input[CONF_BOARD] if user_input else next(iter(boards))
+            )
+            return await getattr(self, f"async_step_{action}_target")()
+        return self.async_show_form(
+            step_id=action,
+            data_schema=vol.Schema(
+                {
+                    vol.Required(CONF_BOARD): selector.SelectSelector(
+                        selector.SelectSelectorConfig(
+                            options=[
+                                selector.SelectOptionDict(value=entry_id, label=e.title)
+                                for entry_id, e in boards.items()
+                            ],
+                            mode=selector.SelectSelectorMode.LIST,
+                        )
+                    )
+                }
+            ),
+            description_placeholders={"name": self._get_reconfigure_subentry().title},
+        )
+
+    async def _async_step_target(
+        self, step_id: str, user_input: dict[str, Any] | None, keep: bool
+    ) -> SubentryFlowResult:
+        """The emitter and name on the other board, then the transfer itself.
+
+        The emitter has to be chosen again: the other board may have fewer, and
+        what sits on each of them is different there.
+        """
+        subentry = self._get_reconfigure_subentry()
+        target = self._other_boards().get(self._target_id)
+        if target is None:
+            return self.async_abort(reason="board_not_loaded")
+
+        errors: dict[str, str] = {}
+        if user_input is not None:
+            name = user_input[CONF_NAME].strip()
+            if not name:
+                errors[CONF_NAME] = "name_empty"
+            elif self._name_taken(name, entry=target):
+                errors[CONF_NAME] = "name_taken"
+            else:
+                return await self._async_transfer(
+                    target, name, int(user_input[CONF_CHANNEL]), keep
+                )
+
+        channels = min(int(target.data.get(CONF_CHANNELS, 1)), MAX_CHANNELS)
+        current = int(subentry.data.get(CONF_CHANNEL, 1))
+        return self.async_show_form(
+            step_id=step_id,
+            data_schema=vol.Schema(
+                {
+                    vol.Required(
+                        CONF_CHANNEL, default=str(current if current <= channels else 1)
+                    ): self._channel_selector(entry=target),
+                    vol.Required(CONF_NAME, default=subentry.title): str,
+                }
+            ),
+            errors=errors,
+            description_placeholders={"name": subentry.title, "board": target.title},
+        )
+
+    async def _async_transfer(
+        self, target: ConfigEntry, name: str, channel: int, keep: bool
+    ) -> SubentryFlowResult:
+        """Hand the appliance to the other board, as a copy or as a move.
+
+        The codes are written to the other board first. Adding the subentry
+        reloads that board, and a reload drops codes nobody owns, so they must
+        already be on disk under the key the subentry will carry.
+
+        A move keeps the key. Every unique id hangs off it, so the entities come
+        back with the same ids, and Home Assistant restores their entity ids,
+        names and areas from the ones the old board just removed. That is also
+        why the old subentry goes first: two entities cannot share a unique id.
+        A copy gets a key of its own, and entities of its own.
+        """
+        source = self._get_entry()
+        subentry = self._get_reconfigure_subentry()
+        coordinator = self._coordinator()
+        if coordinator is None:
+            return self.async_abort(reason="board_not_loaded")
+        target_coordinator: TasmotaIrCoordinator = target.runtime_data
+
+        key = subentry.unique_id or ""
+        new_key = uuid4().hex if keep else key
+        codes = copy.deepcopy(coordinator.codes.get(key, {}))
+        await target_coordinator.async_store_codes(new_key, codes)
+
+        if not keep:
+            self.hass.config_entries.async_remove_subentry(source, subentry.subentry_id)
+        self.hass.config_entries.async_add_subentry(
+            target,
+            ConfigSubentry(
+                data=MappingProxyType({**subentry.data, CONF_CHANNEL: channel}),
+                subentry_type=subentry.subentry_type,
+                title=name,
+                unique_id=new_key,
+            ),
+        )
+        return self.async_abort(
+            reason="copied" if keep else "moved",
+            description_placeholders={
+                "name": name,
+                "board": target.title,
+                "channel": str(channel),
+            },
+        )
+
 
 class ApplianceSubentryFlow(_TasmotaIrSubentryFlow):
     """A television, a sound bar, a fan: anything learned key by key."""
@@ -492,7 +655,14 @@ class ApplianceSubentryFlow(_TasmotaIrSubentryFlow):
         self._channel = int(subentry.data.get(CONF_CHANNEL, 1))
         return self.async_show_menu(
             step_id="reconfigure",
-            menu_options=["learn", "delete_command", "channel", "rename"],
+            menu_options=[
+                "learn",
+                "delete_command",
+                "channel",
+                "rename",
+                "move",
+                "copy",
+            ],
             description_placeholders={
                 "name": self._name,
                 "channel": str(self._channel),
@@ -776,7 +946,14 @@ class ClimateSubentryFlow(_TasmotaIrSubentryFlow):
         self._channel = int(subentry.data.get(CONF_CHANNEL, 1))
         return self.async_show_menu(
             step_id="reconfigure",
-            menu_options=["settings", "read_remote", "channel", "rename"],
+            menu_options=[
+                "settings",
+                "read_remote",
+                "channel",
+                "rename",
+                "move",
+                "copy",
+            ],
             description_placeholders={
                 "name": self._name,
                 "vendor": subentry.data.get(CONF_VENDOR, ""),
