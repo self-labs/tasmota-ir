@@ -32,6 +32,7 @@ from .const import (
     GPIO_IRRECV,
     GPIO_IRSEND_PREFIX,
     KEY_CHANNEL,
+    KEY_FREQUENCY,
     KEY_IR_RECEIVED,
     KEY_IRHVAC,
     KEY_RAW_DATA,
@@ -40,6 +41,7 @@ from .const import (
     PROBE_TIMEOUT,
     PROTOCOL_RAW,
     RAW_FREQUENCY,
+    RAW_REPLY_TIMEOUT,
     SIGNAL_AVAILABILITY,
     SIGNAL_CODES_UPDATED,
     SIGNAL_IR_RECEIVED,
@@ -99,6 +101,11 @@ class TasmotaIrCoordinator:
                 asyncio.Future[dict[str, Any]], Callable[[dict[str, Any]], bool] | None
             ]
         ] = []
+        # Whether the firmware takes a raw code as JSON with a Channel. None
+        # until the first raw code for an emitter other than 1 finds out, and
+        # forgotten whenever the board comes back online, since that is when
+        # its firmware may have changed.
+        self._raw_json: bool | None = None
 
     # ------------------------------------------------------------------
     # Topics
@@ -175,6 +182,8 @@ class TasmotaIrCoordinator:
         if available == self.available:
             return
         self.available = available
+        if available:
+            self._raw_json = None
         async_dispatcher_send(
             self.hass, SIGNAL_AVAILABILITY.format(entry_id=self.entry.entry_id)
         )
@@ -263,32 +272,89 @@ class TasmotaIrCoordinator:
         """Send a stored code, in whichever form the firmware accepts.
 
         A decoded protocol goes as JSON and carries the emitter. A raw capture
-        cannot: ``CmndIrSend`` routes on whether the payload contains a brace,
-        so raw has to be the plain ``IRSend <freq>,<data>`` form, and that form
-        has no channel parameter at all. Raw therefore always leaves through the
-        first emitter, which is the firmware's limit and not a choice made here.
+        goes through ``_async_send_raw_code``, which picks the emitter when the
+        firmware allows it.
         """
         if code.get("Protocol") == PROTOCOL_RAW:
-            raw = code.get(KEY_RAW_DATA)
-            if not raw:
-                raise CodeTooLargeError("the stored raw code is empty")
-            frequency = code.get("Frequency", RAW_FREQUENCY)
-            payload = f"{frequency},{raw}"
-            if len(payload) > MAX_CODE_BYTES:
-                raise CodeTooLargeError(
-                    f"the raw code is {len(payload)} bytes, above the "
-                    f"{MAX_CODE_BYTES} the board accepts in one message"
-                )
-            if channel not in (None, 1):
-                _LOGGER.warning(
-                    "Sending a raw code on emitter 1 instead of %s: the "
-                    "firmware's raw form takes no channel",
-                    channel,
-                )
-            await self.async_send_raw(CMND_IRSEND, payload)
+            await self._async_send_raw_code(code, channel)
             return
 
         await self.async_send_json(CMND_IRSEND, code, channel=channel)
+
+    async def _async_send_raw_code(
+        self, code: dict[str, Any], channel: int | None
+    ) -> None:
+        """Send a raw capture, on its own emitter when the firmware can.
+
+        Emitter 1 always gets the plain ``IRSend <freq>,<data>`` form, which
+        every firmware takes and which leaves through the first emitter anyway.
+        Any other emitter needs the JSON form of arendst/Tasmota#25062. A
+        firmware without it answers ``Wrong Protocol`` and sends nothing, so
+        the first raw code of a board waits for that answer: ``Done`` settles
+        it, anything else falls back to the plain form on emitter 1, where a
+        remote at least has a chance, and says so in the log.
+        """
+        raw = code.get(KEY_RAW_DATA)
+        if not raw:
+            raise CodeTooLargeError("the stored raw code is empty")
+        frequency = code.get(KEY_FREQUENCY, RAW_FREQUENCY)
+
+        if channel not in (None, 1) and self._raw_json is not False:
+            encoded = json.dumps(
+                {KEY_RAW_DATA: raw, KEY_FREQUENCY: frequency, KEY_CHANNEL: channel},
+                separators=(",", ":"),
+            )
+            if len(encoded) > MAX_CODE_BYTES:
+                _LOGGER.warning(
+                    "Sending a raw code on emitter 1 instead of %s: with the "
+                    "emitter it is %s bytes, above the %s the board accepts",
+                    channel,
+                    len(encoded),
+                    MAX_CODE_BYTES,
+                )
+            elif self._raw_json:
+                await self.async_send_raw(CMND_IRSEND, encoded)
+                return
+            else:
+                reply = await self._async_command_reply(
+                    CMND_IRSEND,
+                    encoded,
+                    wanted=is_irsend_reply,
+                    timeout=RAW_REPLY_TIMEOUT,
+                )
+                if reply is None:
+                    # Whether it left is unknown, and sending it again could
+                    # fire the same key twice. The next raw code asks again.
+                    _LOGGER.warning(
+                        "The board did not answer a raw code sent on emitter "
+                        "%s; it may or may not have gone out",
+                        channel,
+                    )
+                    return
+                if irsend_reply_text(reply) == "Done":
+                    self._raw_json = True
+                    return
+                self._raw_json = False
+                _LOGGER.warning(
+                    "This firmware cannot choose the emitter of a raw code (it "
+                    "answered %r), so raw codes leave through emitter 1 until "
+                    "the board restarts. arendst/Tasmota#25062 adds it",
+                    irsend_reply_text(reply),
+                )
+        elif channel not in (None, 1):
+            _LOGGER.warning(
+                "Sending a raw code on emitter 1 instead of %s: this firmware "
+                "cannot choose the emitter of a raw code",
+                channel,
+            )
+
+        payload = f"{frequency},{raw}"
+        if len(payload) > MAX_CODE_BYTES:
+            raise CodeTooLargeError(
+                f"the raw code is {len(payload)} bytes, above the "
+                f"{MAX_CODE_BYTES} the board accepts in one message"
+            )
+        await self.async_send_raw(CMND_IRSEND, payload)
 
     async def async_probe_channels(self) -> tuple[int, bool]:
         """Ask the board how many emitters it has and whether it can receive.
@@ -303,9 +369,16 @@ class TasmotaIrCoordinator:
         return count_ir_gpios(reply)
 
     async def _async_command_reply(
-        self, command: str, payload: str
+        self,
+        command: str,
+        payload: str,
+        wanted: Callable[[dict[str, Any]], bool] | None = None,
+        timeout: float = PROBE_TIMEOUT,
     ) -> dict[str, Any] | None:
-        """Publish a command and wait for the matching stat/ reply."""
+        """Publish a command and wait for the matching stat/ reply.
+
+        ``wanted`` skips replies to other commands, which share the topic.
+        """
         future: asyncio.Future[dict[str, Any]] = self.hass.loop.create_future()
 
         @callback
@@ -316,7 +389,7 @@ class TasmotaIrCoordinator:
                 parsed = json.loads(message.payload)
             except ValueError:
                 return
-            if isinstance(parsed, dict):
+            if isinstance(parsed, dict) and (wanted is None or wanted(parsed)):
                 future.set_result(parsed)
 
         unsubscribe = await mqtt.async_subscribe(
@@ -324,7 +397,7 @@ class TasmotaIrCoordinator:
         )
         try:
             await self.async_send_raw(command, payload)
-            async with asyncio.timeout(PROBE_TIMEOUT):
+            async with asyncio.timeout(timeout):
                 return await future
         except TimeoutError:
             return None
@@ -541,6 +614,23 @@ def extract_code(received: dict[str, Any]) -> dict[str, Any]:
         "RawData": received.get("RawData"),
         "Frequency": RAW_FREQUENCY,
     }
+
+
+def irsend_reply_text(reply: dict[str, Any]) -> str | None:
+    """The board's answer to an IRSend, whatever case the key comes in.
+
+    Tasmota names the key after the command table, not after what was typed,
+    so it is matched without regard to case.
+    """
+    for key, value in reply.items():
+        if key.lower() == CMND_IRSEND.lower():
+            return value if isinstance(value, str) else str(value)
+    return None
+
+
+def is_irsend_reply(reply: dict[str, Any]) -> bool:
+    """Whether a stat/RESULT payload answers an IRSend, not some other command."""
+    return irsend_reply_text(reply) is not None
 
 
 def count_ir_gpios(gpio_reply: dict[str, Any]) -> tuple[int, bool]:

@@ -9,6 +9,12 @@ about compatibility, only when it was published.
 
 ## [Unreleased]
 
+## [2026.9.10] - 2026-09-25
+
+### Changed
+
+- **Raw codes leave through their appliance's emitter when the firmware allows it.** A remote whose protocol the firmware does not know is stored as raw, and the plain `IRSend <freq>,<data>` form takes no channel, so until now every raw code left through emitter 1 whatever the appliance said. [arendst/Tasmota#25062](https://github.com/arendst/Tasmota/pull/25062) adds `IRSend {"RawData":...,"Frequency":...,"Channel":...}`, and the integration now sends that for any emitter other than 1. The first time, it waits for the board's answer: `Done` is kept and later codes go without waiting; `Wrong Protocol`, what a firmware without the PR says while sending nothing, makes it fall back to the plain form on emitter 1 from then on, with a warning in the log. The answer is forgotten whenever the board comes back online, since that is when its firmware may have changed. Emitter 1 keeps the plain form, which every firmware takes. With no answer at all, nothing is sent again, since the key may already have gone out.
+
 ## [2026.9.9] - 2026-09-23
 
 ### Added
@@ -136,7 +142,8 @@ about compatibility, only when it was published.
 - **Partial captures are discarded at capture time.** A truncated frame arrives with `Data` of `"0x"` and `Bits` of `0`, and storing one produces a command that is accepted, listed and reproduces nothing.
 - **Entities attach to the board's existing device.** The device info declares `connections={(CONNECTION_NETWORK_MAC, mac)}`, which is what the Tasmota integration uses, so the IR entities sit next to the board's diagnostics instead of forming a second device for the same hardware.
 
-[Unreleased]: https://github.com/self-labs/tasmota-ir/compare/v2026.9.9...HEAD
+[Unreleased]: https://github.com/self-labs/tasmota-ir/compare/v2026.9.10...HEAD
+[2026.9.10]: https://github.com/self-labs/tasmota-ir/compare/v2026.9.9...v2026.9.10
 [2026.9.9]: https://github.com/self-labs/tasmota-ir/compare/v2026.9.8...v2026.9.9
 [2026.9.8]: https://github.com/self-labs/tasmota-ir/compare/v2026.9.7...v2026.9.8
 [2026.9.7]: https://github.com/self-labs/tasmota-ir/compare/v2026.9.6...v2026.9.7

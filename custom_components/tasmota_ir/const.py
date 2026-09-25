@@ -114,11 +114,18 @@ KEY_IR_RECEIVED: Final = "IrReceived"
 KEY_IRHVAC: Final = "IRHVAC"
 KEY_CHANNEL: Final = "Channel"
 KEY_RAW_DATA: Final = "RawData"
+KEY_FREQUENCY: Final = "Frequency"
 PROTOCOL_RAW: Final = "RAW"
-# Raw codes do not travel as JSON: CmndIrSend routes on the presence of a
-# brace, so a raw send has to be the plain "IRSend <freq>,<data>" form. 38 kHz
-# is what consumer infrared uses and what the receiver assumes.
+# Raw codes have two forms. The plain "IRSend <freq>,<data>" works on every
+# firmware and always leaves through the first emitter. The JSON form,
+# {"RawData":..., "Frequency":..., "Channel":...}, picks the emitter, and only
+# a firmware carrying arendst/Tasmota#25062 understands it; an older one answers
+# "Wrong Protocol" and sends nothing. 38 kHz is what consumer infrared uses and
+# what the receiver assumes.
 RAW_FREQUENCY: Final = 38000
+# How long to wait for the board to say whether it took a raw code as JSON. It
+# answers in well under a second; this only runs out when the reply is lost.
+RAW_REPLY_TIMEOUT: Final = 5
 
 # The firmware counts IR emitters from 1 and reports them as IRsend1..IRsendN
 # in the reply to the Gpio command. Sixteen is the ceiling MAX_IRSEND imposes.
