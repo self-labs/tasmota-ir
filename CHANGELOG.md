@@ -9,6 +9,15 @@ about compatibility, only when it was published.
 
 ## [Unreleased]
 
+### Changed
+
+- **The README covers every function.** The tree on it had stopped at the entities of 2026.9.5; it now shows a board as Home Assistant lists it and, beside it, every menu and where it is, move and copy included. New sections: a quick start from nothing to a working button, every field of the three remote actions with its default (`num_repeats` 1, `delay_secs` 0.4, `timeout` 20), what `remote.turn_off` pauses and what it does not, the attributes of each entity, the event payload with a complete automation, what the climate entity offers, and where the codes are kept.
+
+### Fixed
+
+- **The README said an air conditioner's modes come from its remote.** Only the vendor and the model do; every mode is offered until **Settings** says which ones the unit has.
+- **The README did not say the emitters are counted once.** A board added while offline gets one emitter and no receiver, and a template changed later is only seen by adding the board again. It is now a warning on the step that adds the board, and a known limit.
+
 ## [2026.9.11] - 2026-09-25
 
 ### Added
