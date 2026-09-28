@@ -412,18 +412,21 @@ appliance name: `Hubb IR1 TV Quarto power` becomes `TV Quarto power`.
 
 ## Known limits
 
-- **Raw codes reach emitters other than 1 only on a firmware that allows it.** A
-  remote whose protocol the firmware does not know is stored as raw, and
-  Tasmota's plain raw form, `IRSend <freq>,<data>`, takes no channel at all.
-  [arendst/Tasmota#25062](https://github.com/arendst/Tasmota/pull/25062) adds a
-  JSON form with a `Channel`, and the integration uses it: the first raw code
-  sent to an appliance on another emitter asks the board, a firmware that
-  answers `Done` keeps getting it, and one that answers `Wrong Protocol` gets
-  the plain form on emitter 1 from then on, with a warning in the log. The
-  question is asked again whenever the board comes back online, since that is
-  when its firmware may have changed. Until that PR is merged, the builds at
-  [self-labs.github.io/tasmota-kincony](https://self-labs.github.io/tasmota-kincony/)
-  carry it.
+- **Raw codes reach emitters other than 1 only on a recent Tasmota.** A remote
+  whose protocol the firmware does not know is stored as raw, and Tasmota's
+  plain raw form, `IRSend <freq>,<data>`, takes no channel at all. The JSON form
+  with a `Channel` is native since
+  [arendst/Tasmota#25062](https://github.com/arendst/Tasmota/pull/25062), merged
+  on 27 September 2026 with the maintainer's follow-up
+  [#25077](https://github.com/arendst/Tasmota/pull/25077): every release after
+  15.6.0 has it, and so do the builds at
+  [self-labs.github.io/tasmota-kincony](https://self-labs.github.io/tasmota-kincony/).
+  The integration uses it: the first raw code sent to an appliance on another
+  emitter asks the board, a firmware that answers `Done` keeps getting it, and
+  an older one, which answers `Wrong Protocol`, gets the plain form on emitter 1
+  from then on, with a warning in the log. The question is asked again whenever
+  the board comes back online, since that is when its firmware may have
+  changed.
 - **A code larger than about 1 KB cannot be sent.** The board's MQTT buffer
   defaults to 1200 bytes and has to carry the topic too. Such a capture is
   refused when learning, with a message, rather than failing later.

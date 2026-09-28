@@ -118,10 +118,12 @@ KEY_FREQUENCY: Final = "Frequency"
 PROTOCOL_RAW: Final = "RAW"
 # Raw codes have two forms. The plain "IRSend <freq>,<data>" works on every
 # firmware and always leaves through the first emitter. The JSON form,
-# {"RawData":..., "Frequency":..., "Channel":...}, picks the emitter, and only
-# a firmware carrying arendst/Tasmota#25062 understands it; an older one answers
-# "Wrong Protocol" and sends nothing. 38 kHz is what consumer infrared uses and
-# what the receiver assumes.
+# {"RawData":..., "Frequency":..., "Channel":...}, picks the emitter. Tasmota
+# takes it natively since arendst/Tasmota#25062, merged on 27 September 2026,
+# so every release after 15.6.0 does; an older firmware answers "Wrong
+# Protocol" and sends nothing. It must carry no "Protocol": since #25077 a known
+# protocol wins over RawData. 38 kHz is what consumer infrared uses and what
+# the receiver assumes.
 RAW_FREQUENCY: Final = 38000
 # How long to wait for the board to say whether it took a raw code as JSON. It
 # answers in well under a second; this only runs out when the reply is lost.

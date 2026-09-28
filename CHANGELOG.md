@@ -12,6 +12,7 @@ about compatibility, only when it was published.
 ### Changed
 
 - **The README covers every function.** The tree on it had stopped at the entities of 2026.9.5; it now shows a board as Home Assistant lists it and, beside it, every menu and where it is, move and copy included. New sections: a quick start from nothing to a working button, every field of the three remote actions with its default (`num_repeats` 1, `delay_secs` 0.4, `timeout` 20), what `remote.turn_off` pauses and what it does not, the attributes of each entity, the event payload with a complete automation, what the climate entity offers, and where the codes are kept.
+- **Raw codes on any emitter are native Tasmota now.** [arendst/Tasmota#25062](https://github.com/arendst/Tasmota/pull/25062) was merged on 27 September 2026, and the maintainer's follow-up [#25077](https://github.com/arendst/Tasmota/pull/25077) went in on top: `RawData` is only used when no known `Protocol` is given, it has to be a JSON string, and a `Frequency` of 0 or above 65535 means 38 kHz. The integration already sends exactly that shape (no `Protocol`, the capture's own string, 38000), so what goes to the board does not change. The README, the comment in `const.py` and the log line for an older firmware now say every release after 15.6.0 has it, instead of pointing at an open PR.
 
 ### Fixed
 

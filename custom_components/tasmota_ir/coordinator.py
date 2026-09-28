@@ -288,8 +288,9 @@ class TasmotaIrCoordinator:
 
         Emitter 1 always gets the plain ``IRSend <freq>,<data>`` form, which
         every firmware takes and which leaves through the first emitter anyway.
-        Any other emitter needs the JSON form of arendst/Tasmota#25062. A
-        firmware without it answers ``Wrong Protocol`` and sends nothing, so
+        Any other emitter needs the JSON form Tasmota takes natively since
+        arendst/Tasmota#25062, in every release after 15.6.0. A firmware
+        without it answers ``Wrong Protocol`` and sends nothing, so
         the first raw code of a board waits for that answer: ``Done`` settles
         it, anything else falls back to the plain form on emitter 1, where a
         remote at least has a chance, and says so in the log.
@@ -338,7 +339,8 @@ class TasmotaIrCoordinator:
                 _LOGGER.warning(
                     "This firmware cannot choose the emitter of a raw code (it "
                     "answered %r), so raw codes leave through emitter 1 until "
-                    "the board restarts. arendst/Tasmota#25062 adds it",
+                    "the board restarts. Every Tasmota release after 15.6.0 "
+                    "can (arendst/Tasmota#25062)",
                     irsend_reply_text(reply),
                 )
         elif channel not in (None, 1):
