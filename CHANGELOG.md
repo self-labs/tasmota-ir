@@ -9,6 +9,8 @@ about compatibility, only when it was published.
 
 ## [Unreleased]
 
+## [2026.10.1] - 2026-10-01
+
 ### Added
 
 - **Sequences.** **Add sequence** on a board makes one button, such as `button.cinema`, that presses keys of several of the board's appliances in order, with a wait of its own after each step but the last (0.4 s by default; a TV just turned on needs a few seconds before it takes a source). A step is an appliance and one of its keys, a learned key, a typed appliance's function or an item of its lists; the code is looked up at the press, so a key learned again is the one sent, on the appliance's current emitter. A step on a typed appliance moves its assumed state as the physical remote would. Every step is checked before anything goes out: a step whose appliance or key is gone, or whose code the board could not take, stops it with an error naming the step and its key, and a missing one shows with ⚠ in **Manage sequence**, which also removes steps and renames. An offline board sends nothing; a board that goes offline half way stops the rest, and the error says at which step; editing or deleting the sequence while it runs stops that run; a press while it runs is ignored. A list item shows its list (`JBL Soundbar: Sources: HDMI 1`). The remote's actions refuse a sequence's name as a `device`, instead of making an appliance called the same. An air conditioner is never a step, and a sequence only moves with **Move everything to another board**, whose result now counts what moved rather than calling it appliances. 22 tests.
@@ -167,7 +169,8 @@ about compatibility, only when it was published.
 - **Partial captures are discarded at capture time.** A truncated frame arrives with `Data` of `"0x"` and `Bits` of `0`, and storing one produces a command that is accepted, listed and reproduces nothing.
 - **Entities attach to the board's existing device.** The device info declares `connections={(CONNECTION_NETWORK_MAC, mac)}`, which is what the Tasmota integration uses, so the IR entities sit next to the board's diagnostics instead of forming a second device for the same hardware.
 
-[Unreleased]: https://github.com/self-labs/tasmota-ir/compare/v2026.9.11...HEAD
+[Unreleased]: https://github.com/self-labs/tasmota-ir/compare/v2026.10.1...HEAD
+[2026.10.1]: https://github.com/self-labs/tasmota-ir/compare/v2026.9.11...v2026.10.1
 [2026.9.11]: https://github.com/self-labs/tasmota-ir/compare/v2026.9.10...v2026.9.11
 [2026.9.10]: https://github.com/self-labs/tasmota-ir/compare/v2026.9.9...v2026.9.10
 [2026.9.9]: https://github.com/self-labs/tasmota-ir/compare/v2026.9.8...v2026.9.9
