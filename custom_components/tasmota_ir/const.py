@@ -17,6 +17,8 @@ CONF_HAS_RECEIVER: Final = "has_receiver"
 # under the board with its own device, its own commands and its own menu.
 SUBENTRY_APPLIANCE: Final = "appliance"
 SUBENTRY_CLIMATE: Final = "climate"
+# Keys of several appliances of the board, pressed in order by one button.
+SUBENTRY_SEQUENCE: Final = "sequence"
 
 # Subentry data.
 CONF_CHANNEL: Final = "channel"
@@ -29,6 +31,7 @@ CONF_HVAC_MODES: Final = "hvac_modes"
 CONF_SWING_VERTICAL: Final = "swing_vertical"
 CONF_SWING_HORIZONTAL: Final = "swing_horizontal"
 CONF_INITIAL_SWING_VERTICAL: Final = "initial_swing_vertical"
+CONF_EXTRAS: Final = "extras"
 
 # Version 1 kept the appliances in the entry options. Only the migration reads
 # these any more.
@@ -159,3 +162,7 @@ MAX_CODE_BYTES: Final = 1000
 SIGNAL_CODES_UPDATED: Final = f"{DOMAIN}_codes_updated_{{entry_id}}"
 SIGNAL_IR_RECEIVED: Final = f"{DOMAIN}_ir_received_{{entry_id}}"
 SIGNAL_AVAILABILITY: Final = f"{DOMAIN}_availability_{{entry_id}}"
+# A sequence pressed a key: (appliance key, function or command, list item).
+SIGNAL_SEQUENCE_SENT: Final = f"{DOMAIN}_sequence_sent_{{entry_id}}"
+# An air conditioner's extras changed, for its switches to show it.
+SIGNAL_CLIMATE_EXTRAS: Final = f"{DOMAIN}_climate_extras_{{key}}"

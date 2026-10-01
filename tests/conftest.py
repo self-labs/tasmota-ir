@@ -12,6 +12,7 @@ from pytest_homeassistant_custom_component.common import (
     async_fire_mqtt_message,
 )
 
+from custom_components.tasmota_ir import typed as typed_module
 from custom_components.tasmota_ir.const import DOMAIN
 
 TOPIC = "tasmota_2C3124"
@@ -85,3 +86,41 @@ async def setup_board(hass: HomeAssistant, entry: MockConfigEntry) -> MockConfig
 def receive(hass: HomeAssistant, frame: dict[str, Any]) -> None:
     """Pretend the board's receiver heard a frame."""
     async_fire_mqtt_message(hass, RESULT_TOPIC, json.dumps({"IrReceived": frame}))
+
+
+IRSEND = f"cmnd/{TOPIC}/IRSend"
+DONE = {"IRSend": "Done"}
+# What a firmware without arendst/Tasmota#25062 answers to raw data as JSON.
+WRONG = {"IRSend": "Wrong Protocol (NEC,SONY,RC5)"}
+
+
+class Board:
+    """The board's side of IRSend: records what arrives, answers JSON with ``reply``."""
+
+    def __init__(
+        self, hass: HomeAssistant, mqtt_client_mock, reply: dict[str, Any] | None
+    ) -> None:
+        self.sent: list[str] = []
+        self.reply = reply
+        original = mqtt_client_mock.publish.side_effect
+
+        def _publish(topic, payload=None, qos=0, retain=False, *args, **kwargs):
+            text = payload.decode() if isinstance(payload, bytes) else (payload or "")
+            if topic == IRSEND:
+                self.sent.append(text)
+                if self.reply is not None and text.startswith("{"):
+                    hass.loop.call_soon(
+                        async_fire_mqtt_message,
+                        hass,
+                        f"stat/{TOPIC}/RESULT",
+                        json.dumps(self.reply),
+                    )
+            return original(topic, payload, qos, retain, *args, **kwargs)
+
+        mqtt_client_mock.publish.side_effect = _publish
+
+
+@pytest.fixture
+def no_delay(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Presses in a row without the 0.4 s pause."""
+    monkeypatch.setattr(typed_module, "PRESS_DELAY", 0)

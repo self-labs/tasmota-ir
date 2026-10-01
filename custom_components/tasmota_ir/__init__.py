@@ -10,6 +10,7 @@ from uuid import uuid4
 from homeassistant.components import mqtt
 from homeassistant.config_entries import ConfigEntry, ConfigSubentry
 from homeassistant.const import Platform
+from homeassistant.const import __version__ as HA_VERSION
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers import entity_registry as er
@@ -38,12 +39,32 @@ from .entity import async_register_devices
 
 _LOGGER = logging.getLogger(__name__)
 
-PLATFORMS: list[Platform] = [
-    Platform.REMOTE,
-    Platform.BUTTON,
-    Platform.CLIMATE,
-    Platform.EVENT,
-]
+# Home Assistant's infrared platform has its emitter and receiver classes from
+# 2026.6 on. An older release simply gets no infrared entities; everything else
+# keeps working there.
+INFRARED_SINCE = (2026, 6)
+
+
+def platforms_for(version: str) -> list[Platform | str]:
+    """The platforms this Home Assistant release can take."""
+    platforms: list[Platform | str] = [
+        Platform.REMOTE,
+        Platform.BUTTON,
+        Platform.CLIMATE,
+        Platform.EVENT,
+        Platform.SWITCH,
+        Platform.MEDIA_PLAYER,
+        Platform.FAN,
+        Platform.LIGHT,
+        Platform.COVER,
+    ]
+    year, month = (int(part) for part in version.split(".")[:2])
+    if (year, month) >= INFRARED_SINCE:
+        platforms.append("infrared")
+    return platforms
+
+
+PLATFORMS = platforms_for(HA_VERSION)
 
 type TasmotaIrConfigEntry = ConfigEntry[TasmotaIrCoordinator]
 
@@ -114,9 +135,7 @@ async def _async_migrate_appliances_to_subentries(
         hass, STORAGE_VERSION, STORAGE_KEY_FORMAT.format(entry_id=entry.entry_id)
     )
     old_codes: dict[str, dict[str, Any]] = await store.async_load() or {}
-    appliances: dict[str, dict[str, Any]] = dict(
-        entry.options.get(CONF_APPLIANCES, {})
-    )
+    appliances: dict[str, dict[str, Any]] = dict(entry.options.get(CONF_APPLIANCES, {}))
 
     keys: dict[str, tuple[str, str]] = {}
     for name in sorted(set(appliances) | set(old_codes)):
@@ -172,6 +191,4 @@ async def _async_migrate_appliances_to_subentries(
             )
 
     hass.config_entries.async_update_entry(entry, options={}, version=2)
-    _LOGGER.info(
-        "Moved %d appliance(s) of %s to subentries", len(keys), entry.title
-    )
+    _LOGGER.info("Moved %d appliance(s) of %s to subentries", len(keys), entry.title)

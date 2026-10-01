@@ -132,6 +132,14 @@
             "channel": "No, try another emitter"
           }
         },
+        "channel_test_replay": {
+          "title": "Did it answer?",
+          "description": "The last command another integration sent to {name} was just sent again, through emitter {channel}. Did the appliance answer?",
+          "menu_options": {
+            "channel_save": "Yes, use this emitter",
+            "channel": "No, try another emitter"
+          }
+        },
         "rename": {
           "title": "Rename",
           "description": "The buttons, the codes and the emitter stay as they are.",
@@ -176,7 +184,11 @@
       "error": {
         "name_empty": "Give it a name.",
         "name_taken": "Another appliance of this board already has this name.",
-        "command_empty": "Give the key a name."
+        "command_empty": "Give the key a name.",
+        "raw_channel": "This board's firmware cannot send a raw code through that emitter. Every Tasmota release after 15.6.0 can, and so do the builds at self-labs.github.io/tasmota-kincony.",
+        "not_confirmed": "The board did not confirm the command on that emitter, so it may or may not have gone out. Check that the board is online and try again.",
+        "board_offline": "The board is offline, so nothing was sent. Try again once it is back.",
+        "already_there": "{board} already has {name}, under another name: it is the same appliance, moved there before. Delete it on one of the boards first."
       },
       "abort": {
         "board_not_loaded": "The board is not running right now. Check that it is online, then try again.",
@@ -237,13 +249,15 @@
             "max_temp": "Highest temperature",
             "hvac_modes": "Modes",
             "swing_vertical": "Vertical vane",
-            "swing_horizontal": "Horizontal vane"
+            "swing_horizontal": "Horizontal vane",
+            "extras": "Extras"
           },
           "data_description": {
             "model": "Some vendors make several remotes that look alike to the decoder, and the model decides what the firmware sends. If the vane does not respond, try another model here. For LG, AKB74955603 is the one that sends the vane; Read the remote again, pressing the vane key, sets it by itself.",
             "hvac_modes": "Only the modes your unit really has. Off is always there.",
             "swing_vertical": "Offer the vane positions on the card. Off by default for vendors where the vane is a toggle, because there every command would flip it.",
-            "swing_horizontal": "Only for units with a horizontal vane that the remote controls."
+            "swing_horizontal": "Only for units with a horizontal vane that the remote controls.",
+            "extras": "What this unit's remote offers, among what the IR library sends for this vendor. Turbo, economy, quiet and sleep become presets on the card; display, beep, self clean and filter become switches on the device."
           }
         },
         "channel": {
@@ -307,7 +321,9 @@
         "name_taken": "Another appliance of this board already has this name.",
         "no_hvac_frame": "No air conditioner frame was decoded.",
         "temp_range": "The highest temperature has to be above the lowest.",
-        "no_modes": "Choose at least one mode besides off."
+        "no_modes": "Choose at least one mode besides off.",
+        "raw_channel": "This board's firmware cannot send a raw code through that emitter. Every Tasmota release after 15.6.0 can, and so do the builds at self-labs.github.io/tasmota-kincony.",
+        "already_there": "{board} already has {name}, under another name: it is the same appliance, moved there before. Delete it on one of the boards first."
       },
       "abort": {
         "board_not_loaded": "The board is not running right now. Check that it is online, then try again.",
@@ -317,9 +333,974 @@
         "copied": "{board} now has {name} too, on emitter {channel}.",
         "no_other_board": "There is no other board to send it to. Add that board to Tasmota IR first."
       }
+    },
+    "media": {
+      "entry_type": "TV or sound bar",
+      "initiate_flow": {
+        "user": "Add TV or sound bar",
+        "reconfigure": "Manage TV or sound bar"
+      },
+      "step": {
+        "user": {
+          "title": "Add TV or sound bar",
+          "description": "Name it and say which emitter points at it. Next come its functions: each one is learned from the remote, taken from a key another appliance of this board already learned, or left out.",
+          "data": {
+            "name": "Name",
+            "channel": "Emitter"
+          },
+          "data_description": {
+            "channel": "The emitter pointed at this appliance, counted in the order of the board template. The ones already in use say which appliance is on them. It can be changed later, and tried, without learning anything again."
+          }
+        },
+        "functions": {
+          "title": "{name}",
+          "description": "Pick a function to learn, reuse or clear, the power sensor, or Finish. Learned so far: {learned}.",
+          "data": {
+            "function": "Function"
+          }
+        },
+        "list_item": {
+          "title": "Which one?",
+          "description": "Name this item of {command}, such as HDMI 1, or pick one to learn again or clear.",
+          "data": {
+            "item": "Name"
+          }
+        },
+        "action": {
+          "title": "{command}",
+          "description": "How should {name} get {command}?",
+          "menu_options": {
+            "learn_now": "Learn it now, from the remote",
+            "reuse": "Use a key this board already learned",
+            "clear": "Clear it"
+          }
+        },
+        "role_wait": {
+          "title": "Waiting for the key"
+        },
+        "role_timeout": {
+          "title": "Nothing arrived",
+          "description": "The board heard no usable key in 30 seconds. Point the remote at the receiver and press the key once, on its own.",
+          "menu_options": {
+            "role_wait": "Try again",
+            "functions": "Back to the functions"
+          }
+        },
+        "role_hvac": {
+          "title": "That is an air conditioner remote",
+          "description": "One capture from an air conditioner remote is one temperature in one mode. Add the unit with Add air conditioner instead.",
+          "menu_options": {
+            "role_wait": "Try again",
+            "functions": "Back to the functions"
+          }
+        },
+        "role_too_large": {
+          "title": "The code is too large",
+          "description": "This key arrived as a raw code larger than the board can send in one MQTT message.",
+          "menu_options": {
+            "role_wait": "Try again",
+            "functions": "Back to the functions"
+          }
+        },
+        "reuse": {
+          "title": "Use a key this board already learned",
+          "description": "Every key the other appliances of this board learned. The code is copied: the other appliance keeps its own.",
+          "data": {
+            "code": "Key"
+          }
+        },
+        "number": {
+          "title": "{command}",
+          "description": "How many speeds the cycling key goes through, how many steps from the dimmest to the brightest, or how many seconds a full run of the cover takes. Leave it empty to clear it.",
+          "data": {
+            "value": "Value"
+          }
+        },
+        "sensor": {
+          "title": "Power sensor",
+          "description": "Optional. An entity that knows whether {name} is really on: something that turns on and off with it, or a power meter, with the watts above which it counts as on. Leave it empty to go by what was sent and heard.",
+          "data": {
+            "power_sensor": "Sensor",
+            "power_threshold": "On above"
+          }
+        },
+        "reconfigure": {
+          "title": "{name}",
+          "description": "{name} is on emitter {channel}. What do you want to do?",
+          "menu_options": {
+            "functions": "Functions",
+            "channel": "Change the emitter",
+            "rename": "Rename",
+            "move": "Move to another board",
+            "copy": "Copy to another board"
+          }
+        },
+        "channel": {
+          "title": "Change the emitter",
+          "description": "{name} is on emitter {channel} today. Pick another one and it is tried before anything is saved: the emitters already in use say which appliance is on them.",
+          "data": {
+            "channel": "Emitter"
+          }
+        },
+        "channel_test": {
+          "title": "Did it answer?",
+          "description": "{command} was just sent to {name} through emitter {channel}. Did the appliance answer?",
+          "menu_options": {
+            "channel_save": "Yes, use this emitter",
+            "channel": "No, try another emitter"
+          }
+        },
+        "rename": {
+          "title": "Rename",
+          "description": "The buttons, the codes and the emitter stay as they are.",
+          "data": {
+            "name": "Name"
+          }
+        },
+        "move": {
+          "title": "Move to another board",
+          "description": "Which board should {name} go to?",
+          "data": {
+            "board": "Board"
+          }
+        },
+        "copy": {
+          "title": "Copy to another board",
+          "description": "Which board gets a copy of {name}?",
+          "data": {
+            "board": "Board"
+          }
+        },
+        "move_target": {
+          "title": "Move to another board",
+          "description": "{name} goes to {board} with every learned command, and its buttons keep their entity ids, names and areas. Pick the emitter there: the emitters already in use say which appliance is on them.",
+          "data": {
+            "channel": "Emitter",
+            "name": "Name"
+          }
+        },
+        "copy_target": {
+          "title": "Copy to another board",
+          "description": "{board} gets its own {name}, with every learned command, and this one stays as it is. Pick the emitter there: the emitters already in use say which appliance is on them.",
+          "data": {
+            "channel": "Emitter",
+            "name": "Name"
+          }
+        }
+      },
+      "progress": {
+        "wait_for_key": "Point the remote of {name} at the board and press {command} once.\n\nWaiting up to 30 seconds."
+      },
+      "error": {
+        "name_empty": "Give it a name.",
+        "name_taken": "Another appliance of this board already has this name.",
+        "raw_channel": "This board's firmware cannot send a raw code through that emitter. Every Tasmota release after 15.6.0 can, and so do the builds at self-labs.github.io/tasmota-kincony.",
+        "not_confirmed": "The board did not confirm the command on that emitter, so it may or may not have gone out. Check that the board is online and try again.",
+        "board_offline": "The board is offline, so nothing was sent. Try again once it is back.",
+        "missing_power": "Learn the power: one key that toggles, or both the on and the off keys.",
+        "missing_open_close": "Learn both open and close.",
+        "item_empty": "Give it a name.",
+        "nothing_to_reuse": "No other appliance of this board has learned a key yet.",
+        "already_there": "{board} already has {name}, under another name: it is the same appliance, moved there before. Delete it on one of the boards first."
+      },
+      "abort": {
+        "board_not_loaded": "The board is not running right now. Check that it is online, then try again.",
+        "no_receiver": "This board has no IRrecv GPIO assigned, so it cannot learn. Assign one in the Tasmota template and reload the integration.",
+        "reconfigure_successful": "Saved.",
+        "moved": "{name} is now on {board}, emitter {channel}.",
+        "copied": "{board} now has {name} too, on emitter {channel}.",
+        "no_other_board": "There is no other board to send it to. Add that board to Tasmota IR first."
+      }
+    },
+    "fan": {
+      "entry_type": "Fan",
+      "initiate_flow": {
+        "user": "Add fan",
+        "reconfigure": "Manage fan"
+      },
+      "step": {
+        "user": {
+          "title": "Add fan",
+          "description": "Name it and say which emitter points at it. Next come its functions: each one is learned from the remote, taken from a key another appliance of this board already learned, or left out.",
+          "data": {
+            "name": "Name",
+            "channel": "Emitter"
+          },
+          "data_description": {
+            "channel": "The emitter pointed at this appliance, counted in the order of the board template. The ones already in use say which appliance is on them. It can be changed later, and tried, without learning anything again."
+          }
+        },
+        "functions": {
+          "title": "{name}",
+          "description": "Pick a function to learn, reuse or clear, the power sensor, or Finish. Learned so far: {learned}.",
+          "data": {
+            "function": "Function"
+          }
+        },
+        "list_item": {
+          "title": "Which one?",
+          "description": "Name this item of {command}, such as HDMI 1, or pick one to learn again or clear.",
+          "data": {
+            "item": "Name"
+          }
+        },
+        "action": {
+          "title": "{command}",
+          "description": "How should {name} get {command}?",
+          "menu_options": {
+            "learn_now": "Learn it now, from the remote",
+            "reuse": "Use a key this board already learned",
+            "clear": "Clear it"
+          }
+        },
+        "role_wait": {
+          "title": "Waiting for the key"
+        },
+        "role_timeout": {
+          "title": "Nothing arrived",
+          "description": "The board heard no usable key in 30 seconds. Point the remote at the receiver and press the key once, on its own.",
+          "menu_options": {
+            "role_wait": "Try again",
+            "functions": "Back to the functions"
+          }
+        },
+        "role_hvac": {
+          "title": "That is an air conditioner remote",
+          "description": "One capture from an air conditioner remote is one temperature in one mode. Add the unit with Add air conditioner instead.",
+          "menu_options": {
+            "role_wait": "Try again",
+            "functions": "Back to the functions"
+          }
+        },
+        "role_too_large": {
+          "title": "The code is too large",
+          "description": "This key arrived as a raw code larger than the board can send in one MQTT message.",
+          "menu_options": {
+            "role_wait": "Try again",
+            "functions": "Back to the functions"
+          }
+        },
+        "reuse": {
+          "title": "Use a key this board already learned",
+          "description": "Every key the other appliances of this board learned. The code is copied: the other appliance keeps its own.",
+          "data": {
+            "code": "Key"
+          }
+        },
+        "number": {
+          "title": "{command}",
+          "description": "How many speeds the cycling key goes through, how many steps from the dimmest to the brightest, or how many seconds a full run of the cover takes. Leave it empty to clear it.",
+          "data": {
+            "value": "Value"
+          }
+        },
+        "sensor": {
+          "title": "Power sensor",
+          "description": "Optional. An entity that knows whether {name} is really on: something that turns on and off with it, or a power meter, with the watts above which it counts as on. Leave it empty to go by what was sent and heard.",
+          "data": {
+            "power_sensor": "Sensor",
+            "power_threshold": "On above"
+          }
+        },
+        "reconfigure": {
+          "title": "{name}",
+          "description": "{name} is on emitter {channel}. What do you want to do?",
+          "menu_options": {
+            "functions": "Functions",
+            "channel": "Change the emitter",
+            "rename": "Rename",
+            "move": "Move to another board",
+            "copy": "Copy to another board"
+          }
+        },
+        "channel": {
+          "title": "Change the emitter",
+          "description": "{name} is on emitter {channel} today. Pick another one and it is tried before anything is saved: the emitters already in use say which appliance is on them.",
+          "data": {
+            "channel": "Emitter"
+          }
+        },
+        "channel_test": {
+          "title": "Did it answer?",
+          "description": "{command} was just sent to {name} through emitter {channel}. Did the appliance answer?",
+          "menu_options": {
+            "channel_save": "Yes, use this emitter",
+            "channel": "No, try another emitter"
+          }
+        },
+        "rename": {
+          "title": "Rename",
+          "description": "The buttons, the codes and the emitter stay as they are.",
+          "data": {
+            "name": "Name"
+          }
+        },
+        "move": {
+          "title": "Move to another board",
+          "description": "Which board should {name} go to?",
+          "data": {
+            "board": "Board"
+          }
+        },
+        "copy": {
+          "title": "Copy to another board",
+          "description": "Which board gets a copy of {name}?",
+          "data": {
+            "board": "Board"
+          }
+        },
+        "move_target": {
+          "title": "Move to another board",
+          "description": "{name} goes to {board} with every learned command, and its buttons keep their entity ids, names and areas. Pick the emitter there: the emitters already in use say which appliance is on them.",
+          "data": {
+            "channel": "Emitter",
+            "name": "Name"
+          }
+        },
+        "copy_target": {
+          "title": "Copy to another board",
+          "description": "{board} gets its own {name}, with every learned command, and this one stays as it is. Pick the emitter there: the emitters already in use say which appliance is on them.",
+          "data": {
+            "channel": "Emitter",
+            "name": "Name"
+          }
+        }
+      },
+      "progress": {
+        "wait_for_key": "Point the remote of {name} at the board and press {command} once.\n\nWaiting up to 30 seconds."
+      },
+      "error": {
+        "name_empty": "Give it a name.",
+        "name_taken": "Another appliance of this board already has this name.",
+        "raw_channel": "This board's firmware cannot send a raw code through that emitter. Every Tasmota release after 15.6.0 can, and so do the builds at self-labs.github.io/tasmota-kincony.",
+        "not_confirmed": "The board did not confirm the command on that emitter, so it may or may not have gone out. Check that the board is online and try again.",
+        "board_offline": "The board is offline, so nothing was sent. Try again once it is back.",
+        "missing_power": "Learn the power: one key that toggles, or both the on and the off keys.",
+        "missing_open_close": "Learn both open and close.",
+        "item_empty": "Give it a name.",
+        "nothing_to_reuse": "No other appliance of this board has learned a key yet.",
+        "already_there": "{board} already has {name}, under another name: it is the same appliance, moved there before. Delete it on one of the boards first."
+      },
+      "abort": {
+        "board_not_loaded": "The board is not running right now. Check that it is online, then try again.",
+        "no_receiver": "This board has no IRrecv GPIO assigned, so it cannot learn. Assign one in the Tasmota template and reload the integration.",
+        "reconfigure_successful": "Saved.",
+        "moved": "{name} is now on {board}, emitter {channel}.",
+        "copied": "{board} now has {name} too, on emitter {channel}.",
+        "no_other_board": "There is no other board to send it to. Add that board to Tasmota IR first."
+      }
+    },
+    "light": {
+      "entry_type": "Light",
+      "initiate_flow": {
+        "user": "Add light",
+        "reconfigure": "Manage light"
+      },
+      "step": {
+        "user": {
+          "title": "Add light",
+          "description": "Name it and say which emitter points at it. Next come its functions: each one is learned from the remote, taken from a key another appliance of this board already learned, or left out.",
+          "data": {
+            "name": "Name",
+            "channel": "Emitter"
+          },
+          "data_description": {
+            "channel": "The emitter pointed at this appliance, counted in the order of the board template. The ones already in use say which appliance is on them. It can be changed later, and tried, without learning anything again."
+          }
+        },
+        "functions": {
+          "title": "{name}",
+          "description": "Pick a function to learn, reuse or clear, the power sensor, or Finish. Learned so far: {learned}.",
+          "data": {
+            "function": "Function"
+          }
+        },
+        "list_item": {
+          "title": "Which one?",
+          "description": "Name this item of {command}, such as HDMI 1, or pick one to learn again or clear.",
+          "data": {
+            "item": "Name"
+          }
+        },
+        "action": {
+          "title": "{command}",
+          "description": "How should {name} get {command}?",
+          "menu_options": {
+            "learn_now": "Learn it now, from the remote",
+            "reuse": "Use a key this board already learned",
+            "clear": "Clear it"
+          }
+        },
+        "role_wait": {
+          "title": "Waiting for the key"
+        },
+        "role_timeout": {
+          "title": "Nothing arrived",
+          "description": "The board heard no usable key in 30 seconds. Point the remote at the receiver and press the key once, on its own.",
+          "menu_options": {
+            "role_wait": "Try again",
+            "functions": "Back to the functions"
+          }
+        },
+        "role_hvac": {
+          "title": "That is an air conditioner remote",
+          "description": "One capture from an air conditioner remote is one temperature in one mode. Add the unit with Add air conditioner instead.",
+          "menu_options": {
+            "role_wait": "Try again",
+            "functions": "Back to the functions"
+          }
+        },
+        "role_too_large": {
+          "title": "The code is too large",
+          "description": "This key arrived as a raw code larger than the board can send in one MQTT message.",
+          "menu_options": {
+            "role_wait": "Try again",
+            "functions": "Back to the functions"
+          }
+        },
+        "reuse": {
+          "title": "Use a key this board already learned",
+          "description": "Every key the other appliances of this board learned. The code is copied: the other appliance keeps its own.",
+          "data": {
+            "code": "Key"
+          }
+        },
+        "number": {
+          "title": "{command}",
+          "description": "How many speeds the cycling key goes through, how many steps from the dimmest to the brightest, or how many seconds a full run of the cover takes. Leave it empty to clear it.",
+          "data": {
+            "value": "Value"
+          }
+        },
+        "sensor": {
+          "title": "Power sensor",
+          "description": "Optional. An entity that knows whether {name} is really on: something that turns on and off with it, or a power meter, with the watts above which it counts as on. Leave it empty to go by what was sent and heard.",
+          "data": {
+            "power_sensor": "Sensor",
+            "power_threshold": "On above"
+          }
+        },
+        "reconfigure": {
+          "title": "{name}",
+          "description": "{name} is on emitter {channel}. What do you want to do?",
+          "menu_options": {
+            "functions": "Functions",
+            "channel": "Change the emitter",
+            "rename": "Rename",
+            "move": "Move to another board",
+            "copy": "Copy to another board"
+          }
+        },
+        "channel": {
+          "title": "Change the emitter",
+          "description": "{name} is on emitter {channel} today. Pick another one and it is tried before anything is saved: the emitters already in use say which appliance is on them.",
+          "data": {
+            "channel": "Emitter"
+          }
+        },
+        "channel_test": {
+          "title": "Did it answer?",
+          "description": "{command} was just sent to {name} through emitter {channel}. Did the appliance answer?",
+          "menu_options": {
+            "channel_save": "Yes, use this emitter",
+            "channel": "No, try another emitter"
+          }
+        },
+        "rename": {
+          "title": "Rename",
+          "description": "The buttons, the codes and the emitter stay as they are.",
+          "data": {
+            "name": "Name"
+          }
+        },
+        "move": {
+          "title": "Move to another board",
+          "description": "Which board should {name} go to?",
+          "data": {
+            "board": "Board"
+          }
+        },
+        "copy": {
+          "title": "Copy to another board",
+          "description": "Which board gets a copy of {name}?",
+          "data": {
+            "board": "Board"
+          }
+        },
+        "move_target": {
+          "title": "Move to another board",
+          "description": "{name} goes to {board} with every learned command, and its buttons keep their entity ids, names and areas. Pick the emitter there: the emitters already in use say which appliance is on them.",
+          "data": {
+            "channel": "Emitter",
+            "name": "Name"
+          }
+        },
+        "copy_target": {
+          "title": "Copy to another board",
+          "description": "{board} gets its own {name}, with every learned command, and this one stays as it is. Pick the emitter there: the emitters already in use say which appliance is on them.",
+          "data": {
+            "channel": "Emitter",
+            "name": "Name"
+          }
+        }
+      },
+      "progress": {
+        "wait_for_key": "Point the remote of {name} at the board and press {command} once.\n\nWaiting up to 30 seconds."
+      },
+      "error": {
+        "name_empty": "Give it a name.",
+        "name_taken": "Another appliance of this board already has this name.",
+        "raw_channel": "This board's firmware cannot send a raw code through that emitter. Every Tasmota release after 15.6.0 can, and so do the builds at self-labs.github.io/tasmota-kincony.",
+        "not_confirmed": "The board did not confirm the command on that emitter, so it may or may not have gone out. Check that the board is online and try again.",
+        "board_offline": "The board is offline, so nothing was sent. Try again once it is back.",
+        "missing_power": "Learn the power: one key that toggles, or both the on and the off keys.",
+        "missing_open_close": "Learn both open and close.",
+        "item_empty": "Give it a name.",
+        "nothing_to_reuse": "No other appliance of this board has learned a key yet.",
+        "already_there": "{board} already has {name}, under another name: it is the same appliance, moved there before. Delete it on one of the boards first."
+      },
+      "abort": {
+        "board_not_loaded": "The board is not running right now. Check that it is online, then try again.",
+        "no_receiver": "This board has no IRrecv GPIO assigned, so it cannot learn. Assign one in the Tasmota template and reload the integration.",
+        "reconfigure_successful": "Saved.",
+        "moved": "{name} is now on {board}, emitter {channel}.",
+        "copied": "{board} now has {name} too, on emitter {channel}.",
+        "no_other_board": "There is no other board to send it to. Add that board to Tasmota IR first."
+      }
+    },
+    "cover": {
+      "entry_type": "Cover",
+      "initiate_flow": {
+        "user": "Add cover",
+        "reconfigure": "Manage cover"
+      },
+      "step": {
+        "user": {
+          "title": "Add cover",
+          "description": "Name it and say which emitter points at it. Next come its functions: each one is learned from the remote, taken from a key another appliance of this board already learned, or left out.",
+          "data": {
+            "name": "Name",
+            "channel": "Emitter"
+          },
+          "data_description": {
+            "channel": "The emitter pointed at this appliance, counted in the order of the board template. The ones already in use say which appliance is on them. It can be changed later, and tried, without learning anything again."
+          }
+        },
+        "functions": {
+          "title": "{name}",
+          "description": "Pick a function to learn, reuse or clear, the power sensor, or Finish. Learned so far: {learned}.",
+          "data": {
+            "function": "Function"
+          }
+        },
+        "list_item": {
+          "title": "Which one?",
+          "description": "Name this item of {command}, such as HDMI 1, or pick one to learn again or clear.",
+          "data": {
+            "item": "Name"
+          }
+        },
+        "action": {
+          "title": "{command}",
+          "description": "How should {name} get {command}?",
+          "menu_options": {
+            "learn_now": "Learn it now, from the remote",
+            "reuse": "Use a key this board already learned",
+            "clear": "Clear it"
+          }
+        },
+        "role_wait": {
+          "title": "Waiting for the key"
+        },
+        "role_timeout": {
+          "title": "Nothing arrived",
+          "description": "The board heard no usable key in 30 seconds. Point the remote at the receiver and press the key once, on its own.",
+          "menu_options": {
+            "role_wait": "Try again",
+            "functions": "Back to the functions"
+          }
+        },
+        "role_hvac": {
+          "title": "That is an air conditioner remote",
+          "description": "One capture from an air conditioner remote is one temperature in one mode. Add the unit with Add air conditioner instead.",
+          "menu_options": {
+            "role_wait": "Try again",
+            "functions": "Back to the functions"
+          }
+        },
+        "role_too_large": {
+          "title": "The code is too large",
+          "description": "This key arrived as a raw code larger than the board can send in one MQTT message.",
+          "menu_options": {
+            "role_wait": "Try again",
+            "functions": "Back to the functions"
+          }
+        },
+        "reuse": {
+          "title": "Use a key this board already learned",
+          "description": "Every key the other appliances of this board learned. The code is copied: the other appliance keeps its own.",
+          "data": {
+            "code": "Key"
+          }
+        },
+        "number": {
+          "title": "{command}",
+          "description": "How many speeds the cycling key goes through, how many steps from the dimmest to the brightest, or how many seconds a full run of the cover takes. Leave it empty to clear it.",
+          "data": {
+            "value": "Value"
+          }
+        },
+        "sensor": {
+          "title": "Power sensor",
+          "description": "Optional. An entity that knows whether {name} is really on: something that turns on and off with it, or a power meter, with the watts above which it counts as on. Leave it empty to go by what was sent and heard.",
+          "data": {
+            "power_sensor": "Sensor",
+            "power_threshold": "On above"
+          }
+        },
+        "reconfigure": {
+          "title": "{name}",
+          "description": "{name} is on emitter {channel}. What do you want to do?",
+          "menu_options": {
+            "functions": "Functions",
+            "channel": "Change the emitter",
+            "rename": "Rename",
+            "move": "Move to another board",
+            "copy": "Copy to another board"
+          }
+        },
+        "channel": {
+          "title": "Change the emitter",
+          "description": "{name} is on emitter {channel} today. Pick another one and it is tried before anything is saved: the emitters already in use say which appliance is on them.",
+          "data": {
+            "channel": "Emitter"
+          }
+        },
+        "channel_test": {
+          "title": "Did it answer?",
+          "description": "{command} was just sent to {name} through emitter {channel}. Did the appliance answer?",
+          "menu_options": {
+            "channel_save": "Yes, use this emitter",
+            "channel": "No, try another emitter"
+          }
+        },
+        "rename": {
+          "title": "Rename",
+          "description": "The buttons, the codes and the emitter stay as they are.",
+          "data": {
+            "name": "Name"
+          }
+        },
+        "move": {
+          "title": "Move to another board",
+          "description": "Which board should {name} go to?",
+          "data": {
+            "board": "Board"
+          }
+        },
+        "copy": {
+          "title": "Copy to another board",
+          "description": "Which board gets a copy of {name}?",
+          "data": {
+            "board": "Board"
+          }
+        },
+        "move_target": {
+          "title": "Move to another board",
+          "description": "{name} goes to {board} with every learned command, and its buttons keep their entity ids, names and areas. Pick the emitter there: the emitters already in use say which appliance is on them.",
+          "data": {
+            "channel": "Emitter",
+            "name": "Name"
+          }
+        },
+        "copy_target": {
+          "title": "Copy to another board",
+          "description": "{board} gets its own {name}, with every learned command, and this one stays as it is. Pick the emitter there: the emitters already in use say which appliance is on them.",
+          "data": {
+            "channel": "Emitter",
+            "name": "Name"
+          }
+        }
+      },
+      "progress": {
+        "wait_for_key": "Point the remote of {name} at the board and press {command} once.\n\nWaiting up to 30 seconds."
+      },
+      "error": {
+        "name_empty": "Give it a name.",
+        "name_taken": "Another appliance of this board already has this name.",
+        "raw_channel": "This board's firmware cannot send a raw code through that emitter. Every Tasmota release after 15.6.0 can, and so do the builds at self-labs.github.io/tasmota-kincony.",
+        "not_confirmed": "The board did not confirm the command on that emitter, so it may or may not have gone out. Check that the board is online and try again.",
+        "board_offline": "The board is offline, so nothing was sent. Try again once it is back.",
+        "missing_power": "Learn the power: one key that toggles, or both the on and the off keys.",
+        "missing_open_close": "Learn both open and close.",
+        "item_empty": "Give it a name.",
+        "nothing_to_reuse": "No other appliance of this board has learned a key yet.",
+        "already_there": "{board} already has {name}, under another name: it is the same appliance, moved there before. Delete it on one of the boards first."
+      },
+      "abort": {
+        "board_not_loaded": "The board is not running right now. Check that it is online, then try again.",
+        "no_receiver": "This board has no IRrecv GPIO assigned, so it cannot learn. Assign one in the Tasmota template and reload the integration.",
+        "reconfigure_successful": "Saved.",
+        "moved": "{name} is now on {board}, emitter {channel}.",
+        "copied": "{board} now has {name} too, on emitter {channel}.",
+        "no_other_board": "There is no other board to send it to. Add that board to Tasmota IR first."
+      }
+    },
+    "switch": {
+      "entry_type": "On and off",
+      "initiate_flow": {
+        "user": "Add on and off",
+        "reconfigure": "Manage on and off"
+      },
+      "step": {
+        "user": {
+          "title": "Add on and off",
+          "description": "Name it and say which emitter points at it. Next come its functions: each one is learned from the remote, taken from a key another appliance of this board already learned, or left out.",
+          "data": {
+            "name": "Name",
+            "channel": "Emitter"
+          },
+          "data_description": {
+            "channel": "The emitter pointed at this appliance, counted in the order of the board template. The ones already in use say which appliance is on them. It can be changed later, and tried, without learning anything again."
+          }
+        },
+        "functions": {
+          "title": "{name}",
+          "description": "Pick a function to learn, reuse or clear, the power sensor, or Finish. Learned so far: {learned}.",
+          "data": {
+            "function": "Function"
+          }
+        },
+        "list_item": {
+          "title": "Which one?",
+          "description": "Name this item of {command}, such as HDMI 1, or pick one to learn again or clear.",
+          "data": {
+            "item": "Name"
+          }
+        },
+        "action": {
+          "title": "{command}",
+          "description": "How should {name} get {command}?",
+          "menu_options": {
+            "learn_now": "Learn it now, from the remote",
+            "reuse": "Use a key this board already learned",
+            "clear": "Clear it"
+          }
+        },
+        "role_wait": {
+          "title": "Waiting for the key"
+        },
+        "role_timeout": {
+          "title": "Nothing arrived",
+          "description": "The board heard no usable key in 30 seconds. Point the remote at the receiver and press the key once, on its own.",
+          "menu_options": {
+            "role_wait": "Try again",
+            "functions": "Back to the functions"
+          }
+        },
+        "role_hvac": {
+          "title": "That is an air conditioner remote",
+          "description": "One capture from an air conditioner remote is one temperature in one mode. Add the unit with Add air conditioner instead.",
+          "menu_options": {
+            "role_wait": "Try again",
+            "functions": "Back to the functions"
+          }
+        },
+        "role_too_large": {
+          "title": "The code is too large",
+          "description": "This key arrived as a raw code larger than the board can send in one MQTT message.",
+          "menu_options": {
+            "role_wait": "Try again",
+            "functions": "Back to the functions"
+          }
+        },
+        "reuse": {
+          "title": "Use a key this board already learned",
+          "description": "Every key the other appliances of this board learned. The code is copied: the other appliance keeps its own.",
+          "data": {
+            "code": "Key"
+          }
+        },
+        "number": {
+          "title": "{command}",
+          "description": "How many speeds the cycling key goes through, how many steps from the dimmest to the brightest, or how many seconds a full run of the cover takes. Leave it empty to clear it.",
+          "data": {
+            "value": "Value"
+          }
+        },
+        "sensor": {
+          "title": "Power sensor",
+          "description": "Optional. An entity that knows whether {name} is really on: something that turns on and off with it, or a power meter, with the watts above which it counts as on. Leave it empty to go by what was sent and heard.",
+          "data": {
+            "power_sensor": "Sensor",
+            "power_threshold": "On above"
+          }
+        },
+        "reconfigure": {
+          "title": "{name}",
+          "description": "{name} is on emitter {channel}. What do you want to do?",
+          "menu_options": {
+            "functions": "Functions",
+            "channel": "Change the emitter",
+            "rename": "Rename",
+            "move": "Move to another board",
+            "copy": "Copy to another board"
+          }
+        },
+        "channel": {
+          "title": "Change the emitter",
+          "description": "{name} is on emitter {channel} today. Pick another one and it is tried before anything is saved: the emitters already in use say which appliance is on them.",
+          "data": {
+            "channel": "Emitter"
+          }
+        },
+        "channel_test": {
+          "title": "Did it answer?",
+          "description": "{command} was just sent to {name} through emitter {channel}. Did the appliance answer?",
+          "menu_options": {
+            "channel_save": "Yes, use this emitter",
+            "channel": "No, try another emitter"
+          }
+        },
+        "rename": {
+          "title": "Rename",
+          "description": "The buttons, the codes and the emitter stay as they are.",
+          "data": {
+            "name": "Name"
+          }
+        },
+        "move": {
+          "title": "Move to another board",
+          "description": "Which board should {name} go to?",
+          "data": {
+            "board": "Board"
+          }
+        },
+        "copy": {
+          "title": "Copy to another board",
+          "description": "Which board gets a copy of {name}?",
+          "data": {
+            "board": "Board"
+          }
+        },
+        "move_target": {
+          "title": "Move to another board",
+          "description": "{name} goes to {board} with every learned command, and its buttons keep their entity ids, names and areas. Pick the emitter there: the emitters already in use say which appliance is on them.",
+          "data": {
+            "channel": "Emitter",
+            "name": "Name"
+          }
+        },
+        "copy_target": {
+          "title": "Copy to another board",
+          "description": "{board} gets its own {name}, with every learned command, and this one stays as it is. Pick the emitter there: the emitters already in use say which appliance is on them.",
+          "data": {
+            "channel": "Emitter",
+            "name": "Name"
+          }
+        }
+      },
+      "progress": {
+        "wait_for_key": "Point the remote of {name} at the board and press {command} once.\n\nWaiting up to 30 seconds."
+      },
+      "error": {
+        "name_empty": "Give it a name.",
+        "name_taken": "Another appliance of this board already has this name.",
+        "raw_channel": "This board's firmware cannot send a raw code through that emitter. Every Tasmota release after 15.6.0 can, and so do the builds at self-labs.github.io/tasmota-kincony.",
+        "not_confirmed": "The board did not confirm the command on that emitter, so it may or may not have gone out. Check that the board is online and try again.",
+        "board_offline": "The board is offline, so nothing was sent. Try again once it is back.",
+        "missing_power": "Learn the power: one key that toggles, or both the on and the off keys.",
+        "missing_open_close": "Learn both open and close.",
+        "item_empty": "Give it a name.",
+        "nothing_to_reuse": "No other appliance of this board has learned a key yet.",
+        "already_there": "{board} already has {name}, under another name: it is the same appliance, moved there before. Delete it on one of the boards first."
+      },
+      "abort": {
+        "board_not_loaded": "The board is not running right now. Check that it is online, then try again.",
+        "no_receiver": "This board has no IRrecv GPIO assigned, so it cannot learn. Assign one in the Tasmota template and reload the integration.",
+        "reconfigure_successful": "Saved.",
+        "moved": "{name} is now on {board}, emitter {channel}.",
+        "copied": "{board} now has {name} too, on emitter {channel}.",
+        "no_other_board": "There is no other board to send it to. Add that board to Tasmota IR first."
+      }
+    },
+    "sequence": {
+      "entry_type": "Sequence",
+      "initiate_flow": {
+        "user": "Add sequence",
+        "reconfigure": "Manage sequence"
+      },
+      "step": {
+        "user": {
+          "title": "Add sequence",
+          "description": "A name for the button that runs it, such as Cinema. Then the steps: each is a key of an appliance of this board, pressed in order.",
+          "data": {
+            "name": "Name"
+          }
+        },
+        "steps": {
+          "title": "{name}",
+          "description": "Steps so far:\n{steps}\n\nThe time in brackets is the wait before the next step. ⚠ marks a step whose appliance or key is no longer on this board.",
+          "data": {
+            "action": "Action"
+          }
+        },
+        "add_step": {
+          "title": "Add a step",
+          "description": "A key of an appliance of this board, and how long to wait after it before the next step: a TV that was just turned on can take several seconds to take a source.",
+          "data": {
+            "step": "Key",
+            "wait": "Wait after"
+          }
+        },
+        "remove_step": {
+          "title": "Remove a step",
+          "description": "Which step of {name} goes.",
+          "data": {
+            "step": "Step"
+          }
+        },
+        "reconfigure": {
+          "title": "{name}",
+          "description": "Steps of {name}: {count}. What do you want to do?",
+          "menu_options": {
+            "steps": "Steps",
+            "rename": "Rename"
+          }
+        },
+        "rename": {
+          "title": "Rename",
+          "description": "The steps stay as they are.",
+          "data": {
+            "name": "Name"
+          }
+        }
+      },
+      "error": {
+        "name_empty": "Give it a name.",
+        "name_taken": "Another appliance of this board already has this name.",
+        "no_steps": "Add at least one step.",
+        "nothing_to_add": "No appliance of this board has a key to press yet. Learn one first."
+      },
+      "abort": {
+        "board_not_loaded": "The board is not running right now. Check that it is online, then try again.",
+        "reconfigure_successful": "Saved."
+      }
     }
   },
   "selector": {
+    "extra": {
+      "options": {
+        "turbo": "Turbo",
+        "econo": "Economy",
+        "quiet": "Quiet",
+        "sleep": "Sleep",
+        "light": "Display",
+        "beep": "Beep",
+        "clean": "Self clean",
+        "filter": "Filter"
+      }
+    },
     "hvac_mode": {
       "options": {
         "off": "Off",
@@ -329,9 +1310,67 @@
         "fan_only": "Fan only",
         "auto": "Auto"
       }
+    },
+    "function": {
+      "options": {
+        "power": "Power (one key that toggles)",
+        "power_on": "Power on",
+        "power_off": "Power off",
+        "volume_up": "Volume up",
+        "volume_down": "Volume down",
+        "mute": "Mute",
+        "sources": "Sources",
+        "channel_up": "Channel up",
+        "channel_down": "Channel down",
+        "play_pause": "Play and pause",
+        "speeds": "Speeds (a key per speed)",
+        "speed_cycle": "Speed (one key that cycles)",
+        "speed_count": "Number of speeds",
+        "oscillate": "Oscillate",
+        "presets": "Modes",
+        "brightness_up": "Brighter",
+        "brightness_down": "Dimmer",
+        "brightness_steps": "Brightness steps",
+        "warmer": "Warmer",
+        "cooler": "Cooler",
+        "color_temp_steps": "Colour steps",
+        "effects": "Effects and colours",
+        "open": "Open",
+        "close": "Close",
+        "stop": "Stop",
+        "travel_time": "Travel time",
+        "sensor": "Power sensor",
+        "finish": "Finish"
+      }
+    },
+    "sequence_action": {
+      "options": {
+        "add_step": "Add a step",
+        "remove_step": "Remove a step",
+        "finish": "Finish"
+      }
     }
   },
   "entity": {
+    "switch": {
+      "display": {
+        "name": "Display"
+      },
+      "beep": {
+        "name": "Beep"
+      },
+      "self_clean": {
+        "name": "Self clean"
+      },
+      "filter": {
+        "name": "Filter"
+      }
+    },
+    "infrared": {
+      "infrared_receiver": {
+        "name": "Infrared receiver"
+      }
+    },
     "remote": {
       "tasmota_ir": {
         "name": "[%key:component::tasmota_ir::title%]"
@@ -340,6 +1379,15 @@
     "climate": {
       "air_conditioner": {
         "state_attributes": {
+          "preset_mode": {
+            "state": {
+              "none": "None",
+              "boost": "Turbo",
+              "eco": "Economy",
+              "quiet": "Quiet",
+              "sleep": "Sleep"
+            }
+          },
           "swing_mode": {
             "state": {
               "off": "Fixed",
@@ -365,7 +1413,44 @@
           }
         }
       }
+    },
+    "event": {
+      "remote": {
+        "name": "Remote"
+      }
     }
   },
-  "title": "Tasmota IR"
+  "title": "Tasmota IR",
+  "options": {
+    "step": {
+      "init": {
+        "title": "Board",
+        "menu_options": {
+          "move_all": "Move everything to another board"
+        }
+      },
+      "move_all": {
+        "title": "Move everything to another board",
+        "description": "Which board should every appliance of this one go to?",
+        "data": {
+          "board": "Board"
+        }
+      },
+      "move_all_emitters": {
+        "title": "Move everything to {board}",
+        "description": "The emitter each appliance will use on {board}; the emitters already in use there say which appliance is on them. Every appliance keeps its codes, functions and settings, and its entities keep their ids, names and areas. Delete this board afterwards, once everything works there. Sequences go along as they are: they have no emitter."
+      }
+    },
+    "error": {
+      "names_taken": "{board} already has appliances with these names: {names}. Rename them on one of the boards first.",
+      "already_there": "{board} already has these very appliances, under other names: {names}. Delete them on one of the boards first.",
+      "changed": "The appliances of this board changed while this was open. Check the emitters again."
+    },
+    "abort": {
+      "no_other_board": "There is no other board to send them to. Add that board to Tasmota IR first.",
+      "nothing_to_move": "This board has no appliances.",
+      "moved_all": "Everything is on {board} now. Moved: {count}.",
+      "board_not_loaded": "The board is not running right now. Check that it is online, then try again."
+    }
+  }
 }

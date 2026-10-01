@@ -216,3 +216,58 @@ async def test_with_several_boards_the_board_is_chosen_first(
     assert not hubb.subentries
     (moved,) = third.subentries.values()
     assert moved.unique_id == "tvkey"
+
+
+async def test_moving_keeps_the_infrared_entities_and_the_old_board_can_go(
+    hass: HomeAssistant, mqtt_mock, entity_registry: er.EntityRegistry
+) -> None:
+    """What LG Infrared was set up with keeps working on the new board."""
+    athom, hubb = await _two_boards(hass, TV)
+    emitter = entity_registry.async_get("infrared.tv_teste")
+    receiver = entity_registry.async_get("infrared.tv_teste_infrared_receiver")
+    assert emitter is not None and receiver is not None
+
+    result = await _open(hass, athom, "appliance", "move")
+    result = await hass.config_entries.subentries.async_configure(
+        result["flow_id"], {"channel": "3", "name": "TV Teste"}
+    )
+    assert result["reason"] == "moved"
+    await hass.async_block_till_done()
+
+    assert await hass.config_entries.async_remove(athom.entry_id)
+    await hass.async_block_till_done()
+
+    for before in (emitter, receiver):
+        after = entity_registry.async_get(before.entity_id)
+        assert after is not None
+        assert after.id == before.id
+        assert after.config_entry_id == hubb.entry_id
+        assert hass.states.get(before.entity_id).state != "unavailable"
+
+
+async def test_a_typed_appliance_moves_with_its_functions(
+    hass: HomeAssistant, mqtt_mock, entity_registry: er.EntityRegistry
+) -> None:
+    """The functions live in the subentry, so the move carries them."""
+    power = {"Protocol": "NEC", "Bits": 32, "Data": "0x20DF10EF"}
+    athom, hubb = await _two_boards(
+        hass,
+        {
+            "data": {"channel": 1, "roles": {"power": power}, "power_threshold": 5},
+            "subentry_type": "switch",
+            "title": "Tomada",
+            "unique_id": "swkey",
+        },
+    )
+    before = entity_registry.async_get("switch.tomada")
+    result = await _open(hass, athom, "switch", "move")
+    result = await hass.config_entries.subentries.async_configure(
+        result["flow_id"], {"channel": "2", "name": "Tomada"}
+    )
+    assert result["reason"] == "moved"
+    await hass.async_block_till_done()
+
+    (moved,) = hubb.subentries.values()
+    assert moved.data["roles"] == {"power": power}
+    after = entity_registry.async_get("switch.tomada")
+    assert after.id == before.id and after.config_entry_id == hubb.entry_id

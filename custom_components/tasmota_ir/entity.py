@@ -53,7 +53,10 @@ def async_register_devices(hass: HomeAssistant, entry: ConfigEntry) -> None:
         board["connections"] = {(CONNECTION_NETWORK_MAC, format_mac(mac))}
     board_device = registry.async_get_or_create(config_entry_id=entry.entry_id, **board)
 
-    for appliance in coordinator.appliances.values():
+    for appliance in (
+        *coordinator.appliances.values(),
+        *coordinator.sequences.values(),
+    ):
         extra: dict[str, Any] = {}
         if vendor := appliance.data.get(CONF_VENDOR):
             extra["manufacturer"] = vendor

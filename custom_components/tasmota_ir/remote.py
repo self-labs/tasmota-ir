@@ -29,11 +29,13 @@ from homeassistant.components.remote import (
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import HomeAssistantError, ServiceValidationError
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.dispatcher import async_dispatcher_connect
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
 
 from .const import (
+    DOMAIN,
     LEARN_TIMEOUT,
     SIGNAL_CODES_UPDATED,
 )
@@ -138,6 +140,7 @@ class TasmotaIrRemote(TasmotaIrEntity, RemoteEntity, RestoreEntity):
             )
         appliance = self.coordinator.find_appliance(name)
         if appliance is None:
+            self._refuse_sequence(name)
             names = ", ".join(
                 sorted(a.name for a in self.coordinator.appliances.values())
             )
@@ -146,6 +149,23 @@ class TasmotaIrRemote(TasmotaIrEntity, RemoteEntity, RestoreEntity):
                 + (f" It has: {names}." if names else " It has none yet.")
             )
         return appliance
+
+    def _refuse_sequence(self, name: str) -> None:
+        """A sequence's name is not an appliance's: say so, and where it is.
+
+        Learning under it would otherwise make an appliance with the same name
+        as the sequence, two devices called the same under one board.
+        """
+        sequence = self.coordinator.find_sequence(name)
+        if sequence is None:
+            return
+        button = er.async_get(self.hass).async_get_entity_id(
+            "button", DOMAIN, f"{sequence.key}_sequence"
+        )
+        raise ServiceValidationError(
+            f"'{sequence.name}' is a sequence, not an appliance, and has no keys "
+            f"of its own. Press {button or 'its button'} to run it."
+        )
 
     def _resolve(self, appliance: Appliance, command: str) -> dict[str, Any]:
         """Find a stored code, or explain precisely what is missing."""
@@ -176,6 +196,7 @@ class TasmotaIrRemote(TasmotaIrEntity, RemoteEntity, RestoreEntity):
                 "Assign one in the Tasmota template and reload the integration."
             )
 
+        self._refuse_sequence(appliance)
         existing = self.coordinator.find_appliance(appliance)
         key = existing.key if existing else uuid4().hex
         learned: dict[str, dict[str, Any]] = {}

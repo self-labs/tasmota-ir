@@ -18,6 +18,7 @@ import logging
 from typing import Any
 
 from homeassistant.components.climate import (
+    PRESET_NONE,
     ClimateEntity,
     ClimateEntityFeature,
     HVACMode,
@@ -26,7 +27,10 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import ATTR_TEMPERATURE, UnitOfTemperature
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.exceptions import HomeAssistantError
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
+from homeassistant.helpers.dispatcher import (
+    async_dispatcher_connect,
+    async_dispatcher_send,
+)
 from homeassistant.helpers.entity_platform import AddConfigEntryEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
 
@@ -49,12 +53,22 @@ from .const import (
     LG_VANE_TOGGLE,
     LG_VENDORS,
     LIGHT_TOGGLE_VENDORS,
+    SIGNAL_CLIMATE_EXTRAS,
     SIGNAL_IR_RECEIVED,
     SUBENTRY_CLIMATE,
     swing_vertical_default,
 )
 from .coordinator import Appliance, CodeTooLargeError, TasmotaIrCoordinator
 from .entity import TasmotaIrEntity
+from .hvac_extras import (
+    PRESET_EXTRAS,
+    PRESET_OF,
+    SLEEP_OFF,
+    SLEEP_ON,
+    SWITCH_EXTRAS,
+    TASMOTA_KEY,
+    appliance_extras,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -168,7 +182,30 @@ class TasmotaIrClimate(TasmotaIrEntity, ClimateEntity, RestoreEntity):
         if self._swing_horizontal:
             features |= ClimateEntityFeature.SWING_HORIZONTAL_MODE
             self._attr_swing_horizontal_modes = list(SWING_H_TO_TASMOTA)
+        # Turbo, economy, quiet and sleep are presets, one at a time, as on the
+        # remotes; display, beep, self clean and filter are switches of their
+        # own. Only what this vendor's protocol sends, and the unit has.
+        self._extras = appliance_extras(data)
+        presets = [extra for extra in PRESET_EXTRAS if extra in self._extras]
+        if presets:
+            features |= ClimateEntityFeature.PRESET_MODE
+            self._attr_preset_modes = [PRESET_NONE] + [PRESET_OF[e] for e in presets]
+            self._attr_preset_mode = PRESET_NONE
+        else:
+            # Said out loud: Home Assistant has no default for these, and the
+            # restore below reads them on every unit.
+            self._attr_preset_modes = None
+            self._attr_preset_mode = None
         self._attr_supported_features = features
+        # What each switch says. The display starts as the remote said; beep,
+        # cleaning and the filter start off, which is what the library assumed
+        # while they were not sent at all.
+        self._switch_on: dict[str, bool] = {
+            "light": self._light == "On",
+            "beep": False,
+            "clean": False,
+            "filter": False,
+        }
 
         self._attr_hvac_mode = HVACMode.OFF
         self._attr_fan_mode = "auto"
@@ -201,6 +238,14 @@ class TasmotaIrClimate(TasmotaIrEntity, ClimateEntity, RestoreEntity):
             swing_h = state.attributes.get("swing_horizontal_mode")
             if swing_h in SWING_H_TO_TASMOTA:
                 self._attr_swing_horizontal_mode = swing_h
+            preset = state.attributes.get("preset_mode")
+            if preset in (self._attr_preset_modes or ()):
+                self._attr_preset_mode = preset
+            saved = state.attributes.get("extras")
+            if isinstance(saved, dict):
+                for extra, on in saved.items():
+                    if extra in self._switch_on and isinstance(on, bool):
+                        self._switch_on[extra] = on
 
         self.async_on_remove(
             async_dispatcher_connect(
@@ -209,6 +254,29 @@ class TasmotaIrClimate(TasmotaIrEntity, ClimateEntity, RestoreEntity):
                 self._handle_received,
             )
         )
+        # The switches ask this entity for their state; they find it here.
+        self.coordinator.climates[self._key] = self
+        self.async_on_remove(self._unregister)
+        self._notify_switches()
+
+    @callback
+    def _unregister(self) -> None:
+        if self.coordinator.climates.get(self._key) is self:
+            del self.coordinator.climates[self._key]
+
+    @callback
+    def _notify_switches(self) -> None:
+        async_dispatcher_send(self.hass, SIGNAL_CLIMATE_EXTRAS.format(key=self._key))
+
+    def extra_is_on(self, extra: str) -> bool:
+        """What a switch of this unit shows."""
+        return self._switch_on.get(extra, False)
+
+    async def async_set_extra(self, extra: str, on: bool) -> None:
+        """Turn one switch extra on or off, sent with the rest of the state."""
+        self._switch_on[extra] = on
+        await self._async_publish_if_on()
+        self._notify_switches()
 
     @callback
     def _handle_received(self, received: dict[str, Any]) -> None:
@@ -227,6 +295,11 @@ class TasmotaIrClimate(TasmotaIrEntity, ClimateEntity, RestoreEntity):
         data = str(received.get("Data", "")).upper()
         is_lg = str(hvac.get("Vendor", "")).upper() in LG_VENDORS
         if is_lg and data == LG_DISPLAY_TOGGLE:
+            # The display key is a toggle of its own: follow it.
+            if "light" in self._extras:
+                self._switch_on["light"] = not self._switch_on["light"]
+                self.async_write_ha_state()
+                self._notify_switches()
             return
         if is_lg and (data.startswith(LG_VANE_PREFIX) or data == LG_VANE_TOGGLE):
             # A vane key: only the vane is real, the rest are defaults.
@@ -270,8 +343,34 @@ class TasmotaIrClimate(TasmotaIrEntity, ClimateEntity, RestoreEntity):
         if not is_lg and self._read_swing(hvac):
             changed = True
 
+        if self._read_extras(hvac):
+            changed = True
+            self._notify_switches()
+
         if changed:
             self.async_write_ha_state()
+
+    def _read_extras(self, hvac: dict[str, Any]) -> bool:
+        """Take the preset and the switches from a frame. Returns whether they changed."""
+        changed = False
+        presets = [e for e in PRESET_EXTRAS if e in self._extras]
+        if presets and any(TASMOTA_KEY[e] in hvac for e in presets):
+            preset = PRESET_NONE
+            for extra in presets:
+                if _is_on(extra, hvac.get(TASMOTA_KEY[extra])):
+                    preset = PRESET_OF[extra]
+                    break
+            if preset != self._attr_preset_mode:
+                self._attr_preset_mode = preset
+                changed = True
+        for extra in SWITCH_EXTRAS:
+            if extra not in self._extras or TASMOTA_KEY[extra] not in hvac:
+                continue
+            on = _is_on(extra, hvac[TASMOTA_KEY[extra]])
+            if on != self._switch_on[extra]:
+                self._switch_on[extra] = on
+                changed = True
+        return changed
 
     def _read_swing(self, hvac: dict[str, Any]) -> bool:
         """Take the vane positions from a frame. Returns whether they changed."""
@@ -322,6 +421,11 @@ class TasmotaIrClimate(TasmotaIrEntity, ClimateEntity, RestoreEntity):
         self._attr_swing_horizontal_mode = swing_horizontal_mode
         await self._async_publish_if_on()
 
+    async def async_set_preset_mode(self, preset_mode: str) -> None:
+        """Turbo, economy, quiet or sleep, or none of them."""
+        self._attr_preset_mode = preset_mode
+        await self._async_publish_if_on()
+
     async def async_turn_on(self) -> None:
         """Return to the mode the unit was last on."""
         await self.async_set_hvac_mode(self._last_on_mode)
@@ -367,7 +471,23 @@ class TasmotaIrClimate(TasmotaIrEntity, ClimateEntity, RestoreEntity):
         # said keeps the display as it was. Vendors where Light is itself a
         # toggle get nothing, or every command would flip the display.
         if self._vendor.upper() not in LIGHT_TOGGLE_VENDORS:
-            payload["Light"] = self._light
+            if "light" in self._extras:
+                payload["Light"] = "On" if self._switch_on["light"] else "Off"
+            else:
+                payload["Light"] = self._light
+        # Each offered extra says what it is, so the unit never keeps one the
+        # card does not show. Sleep is a number: SLEEP_ON or SLEEP_OFF.
+        for extra in PRESET_EXTRAS:
+            if extra in self._extras:
+                on = self._attr_preset_mode == PRESET_OF[extra]
+                payload[TASMOTA_KEY[extra]] = (
+                    (SLEEP_ON if on else SLEEP_OFF)
+                    if extra == "sleep"
+                    else ("On" if on else "Off")
+                )
+        for extra in ("beep", "clean", "filter"):
+            if extra in self._extras:
+                payload[TASMOTA_KEY[extra]] = "On" if self._switch_on[extra] else "Off"
 
         try:
             await self.coordinator.async_send_json(
@@ -383,8 +503,22 @@ class TasmotaIrClimate(TasmotaIrEntity, ClimateEntity, RestoreEntity):
     @property
     def extra_state_attributes(self) -> dict[str, Any]:
         """What the firmware is told, so a wrong model is easy to spot."""
-        return {
+        attributes: dict[str, Any] = {
             "vendor": self._vendor,
             "model": self._model,
             "emitter": self.coordinator.channel_for(self._key),
         }
+        switches = {e: self._switch_on[e] for e in SWITCH_EXTRAS if e in self._extras}
+        if switches:
+            attributes["extras"] = switches
+        return attributes
+
+
+def _is_on(extra: str, value: Any) -> bool:
+    """Read an extra from a frame: Sleep is minutes, the rest are On or Off."""
+    if extra == "sleep":
+        try:
+            return int(value) >= 0
+        except (TypeError, ValueError):
+            return False
+    return str(value).lower() in ("on", "true", "1")

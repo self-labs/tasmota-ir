@@ -132,6 +132,14 @@
             "channel": "Não, tentar outro emissor"
           }
         },
+        "channel_test_replay": {
+          "title": "Respondeu?",
+          "description": "Acabei de mandar de novo, pelo emissor {channel}, o último comando que outra integração mandou para {name}. O aparelho respondeu?",
+          "menu_options": {
+            "channel_save": "Sim, usar esse emissor",
+            "channel": "Não, tentar outro emissor"
+          }
+        },
         "rename": {
           "title": "Renomear",
           "description": "Os botões, os códigos e o emissor continuam como estão.",
@@ -176,7 +184,11 @@
       "error": {
         "name_empty": "Dê um nome.",
         "name_taken": "Outro aparelho desta placa já tem esse nome.",
-        "command_empty": "Dê um nome para a tecla."
+        "command_empty": "Dê um nome para a tecla.",
+        "raw_channel": "O firmware desta placa não manda código bruto por esse emissor. Todo Tasmota depois da 15.6.0 manda, e os builds de self-labs.github.io/tasmota-kincony também.",
+        "not_confirmed": "A placa não confirmou o comando nesse emissor, então ele pode ou não ter saído. Confira se a placa está online e tente de novo.",
+        "board_offline": "A placa está offline, então nada foi enviado. Tente de novo quando ela voltar.",
+        "already_there": "{board} já tem {name}, com outro nome: é o mesmo aparelho, movido para lá antes. Apague em uma das placas antes."
       },
       "abort": {
         "board_not_loaded": "A placa não está rodando agora. Confira se ela está online e tente de novo.",
@@ -237,13 +249,15 @@
             "max_temp": "Temperatura máxima",
             "hvac_modes": "Modos",
             "swing_vertical": "Paleta vertical",
-            "swing_horizontal": "Paleta horizontal"
+            "swing_horizontal": "Paleta horizontal",
+            "extras": "Extras"
           },
           "data_description": {
             "model": "Alguns fabricantes têm vários controles que o decodificador não distingue, e o modelo decide o que o firmware manda. Se a paleta não responder, troque o modelo aqui. No LG, o AKB74955603 é o que manda a paleta; Ler o controle de novo, apertando a tecla da paleta, escolhe esse sozinho.",
             "hvac_modes": "Só os modos que o seu aparelho tem de verdade. Desligado está sempre lá.",
             "swing_vertical": "Mostra as posições da paleta no card. Vem desligado nos fabricantes em que a paleta é um liga e desliga, porque ali cada comando a inverteria.",
-            "swing_horizontal": "Só para aparelhos com paleta horizontal comandada pelo controle."
+            "swing_horizontal": "Só para aparelhos com paleta horizontal comandada pelo controle.",
+            "extras": "O que o controle desta unidade oferece, entre o que a biblioteca de IR manda para este fabricante. Turbo, econômico, silencioso e sleep viram presets no card; display, bipe, limpeza e filtro viram interruptores no dispositivo."
           }
         },
         "channel": {
@@ -307,7 +321,9 @@
         "name_taken": "Outro aparelho desta placa já tem esse nome.",
         "no_hvac_frame": "Nenhum quadro de ar-condicionado foi decodificado.",
         "temp_range": "A temperatura máxima precisa ser maior que a mínima.",
-        "no_modes": "Escolha pelo menos um modo além de desligado."
+        "no_modes": "Escolha pelo menos um modo além de desligado.",
+        "raw_channel": "O firmware desta placa não manda código bruto por esse emissor. Todo Tasmota depois da 15.6.0 manda, e os builds de self-labs.github.io/tasmota-kincony também.",
+        "already_there": "{board} já tem {name}, com outro nome: é o mesmo aparelho, movido para lá antes. Apague em uma das placas antes."
       },
       "abort": {
         "board_not_loaded": "A placa não está rodando agora. Confira se ela está online e tente de novo.",
@@ -317,9 +333,974 @@
         "copied": "A {board} agora também tem {name}, no emissor {channel}.",
         "no_other_board": "Não há outra placa para onde levar. Adicione essa placa ao Tasmota IR primeiro."
       }
+    },
+    "media": {
+      "entry_type": "TV ou som",
+      "initiate_flow": {
+        "user": "Adicionar TV ou som",
+        "reconfigure": "Gerenciar TV ou som"
+      },
+      "step": {
+        "user": {
+          "title": "Adicionar TV ou som",
+          "description": "Dê um nome e diga qual emissor aponta para ele. Depois vêm as funções: cada uma é aprendida pelo controle, tirada de uma tecla que outro aparelho desta placa já aprendeu, ou deixada de fora.",
+          "data": {
+            "name": "Nome",
+            "channel": "Emissor"
+          },
+          "data_description": {
+            "channel": "O emissor apontado para este aparelho, na ordem do template da placa. Os que já estão em uso mostram por qual aparelho. Dá para trocar depois, e testar, sem aprender nada de novo."
+          }
+        },
+        "functions": {
+          "title": "{name}",
+          "description": "Escolha uma função para aprender, reaproveitar ou limpar, o sensor de energia, ou Concluir. Aprendido até agora: {learned}.",
+          "data": {
+            "function": "Função"
+          }
+        },
+        "list_item": {
+          "title": "Qual?",
+          "description": "Dê um nome a este item de {command}, como HDMI 1, ou escolha um para aprender de novo ou limpar.",
+          "data": {
+            "item": "Nome"
+          }
+        },
+        "action": {
+          "title": "{command}",
+          "description": "Como {name} deve receber {command}?",
+          "menu_options": {
+            "learn_now": "Aprender agora, pelo controle",
+            "reuse": "Usar uma tecla que esta placa já aprendeu",
+            "clear": "Limpar"
+          }
+        },
+        "role_wait": {
+          "title": "Esperando a tecla"
+        },
+        "role_timeout": {
+          "title": "Nada chegou",
+          "description": "A placa não ouviu nenhuma tecla aproveitável em 30 segundos. Aponte o controle para o receptor e aperte a tecla uma vez, sozinha.",
+          "menu_options": {
+            "role_wait": "Tentar de novo",
+            "functions": "Voltar às funções"
+          }
+        },
+        "role_hvac": {
+          "title": "Esse é um controle de ar-condicionado",
+          "description": "Uma captura de controle de ar-condicionado é uma temperatura em um modo. Adicione a unidade por Adicionar ar-condicionado.",
+          "menu_options": {
+            "role_wait": "Tentar de novo",
+            "functions": "Voltar às funções"
+          }
+        },
+        "role_too_large": {
+          "title": "O código é grande demais",
+          "description": "Esta tecla chegou como código bruto maior do que a placa consegue mandar numa mensagem MQTT.",
+          "menu_options": {
+            "role_wait": "Tentar de novo",
+            "functions": "Voltar às funções"
+          }
+        },
+        "reuse": {
+          "title": "Usar uma tecla que esta placa já aprendeu",
+          "description": "Todas as teclas que os outros aparelhos desta placa aprenderam. O código é copiado: o outro aparelho continua com o dele.",
+          "data": {
+            "code": "Tecla"
+          }
+        },
+        "number": {
+          "title": "{command}",
+          "description": "Quantas velocidades a tecla cíclica percorre, quantos passos do mais fraco ao mais forte, ou quantos segundos a cortina leva de ponta a ponta. Deixe vazio para limpar.",
+          "data": {
+            "value": "Valor"
+          }
+        },
+        "sensor": {
+          "title": "Sensor de energia",
+          "description": "Opcional. Uma entidade que sabe se {name} está ligado de verdade: algo que liga e desliga junto com ele, ou um medidor de potência, com os watts acima dos quais conta como ligado. Deixe vazio para ir pelo que foi mandado e ouvido.",
+          "data": {
+            "power_sensor": "Sensor",
+            "power_threshold": "Ligado acima de"
+          }
+        },
+        "reconfigure": {
+          "title": "{name}",
+          "description": "{name} está no emissor {channel}. O que você quer fazer?",
+          "menu_options": {
+            "functions": "Funções",
+            "channel": "Trocar o emissor",
+            "rename": "Renomear",
+            "move": "Mover para outra placa",
+            "copy": "Copiar para outra placa"
+          }
+        },
+        "channel": {
+          "title": "Trocar o emissor",
+          "description": "Hoje {name} está no emissor {channel}. Escolha outro e ele é testado antes de salvar: os emissores já usados mostram por qual aparelho.",
+          "data": {
+            "channel": "Emissor"
+          }
+        },
+        "channel_test": {
+          "title": "Respondeu?",
+          "description": "Acabei de mandar {command} para {name} pelo emissor {channel}. O aparelho respondeu?",
+          "menu_options": {
+            "channel_save": "Sim, usar esse emissor",
+            "channel": "Não, tentar outro emissor"
+          }
+        },
+        "rename": {
+          "title": "Renomear",
+          "description": "Os botões, os códigos e o emissor continuam como estão.",
+          "data": {
+            "name": "Nome"
+          }
+        },
+        "move": {
+          "title": "Mover para outra placa",
+          "description": "Para qual placa {name} vai?",
+          "data": {
+            "board": "Placa"
+          }
+        },
+        "copy": {
+          "title": "Copiar para outra placa",
+          "description": "Qual placa recebe uma cópia de {name}?",
+          "data": {
+            "board": "Placa"
+          }
+        },
+        "move_target": {
+          "title": "Mover para outra placa",
+          "description": "{name} vai para {board} com todos os comandos aprendidos, e os botões continuam com os mesmos IDs de entidade, nomes e áreas. Escolha o emissor lá: os emissores já usados mostram por qual aparelho.",
+          "data": {
+            "channel": "Emissor",
+            "name": "Nome"
+          }
+        },
+        "copy_target": {
+          "title": "Copiar para outra placa",
+          "description": "{board} ganha o seu próprio {name}, com todos os comandos aprendidos, e este continua como está. Escolha o emissor lá: os emissores já usados mostram por qual aparelho.",
+          "data": {
+            "channel": "Emissor",
+            "name": "Nome"
+          }
+        }
+      },
+      "progress": {
+        "wait_for_key": "Aponte o controle de {name} para a placa e aperte {command} uma vez.\n\nEsperando até 30 segundos."
+      },
+      "error": {
+        "name_empty": "Dê um nome.",
+        "name_taken": "Outro aparelho desta placa já tem esse nome.",
+        "raw_channel": "O firmware desta placa não manda código bruto por esse emissor. Todo Tasmota depois da 15.6.0 manda, e os builds de self-labs.github.io/tasmota-kincony também.",
+        "not_confirmed": "A placa não confirmou o comando nesse emissor, então ele pode ou não ter saído. Confira se a placa está online e tente de novo.",
+        "board_offline": "A placa está offline, então nada foi enviado. Tente de novo quando ela voltar.",
+        "missing_power": "Aprenda o ligar: uma tecla que alterna, ou as duas teclas, de ligar e de desligar.",
+        "missing_open_close": "Aprenda abrir e fechar.",
+        "item_empty": "Dê um nome.",
+        "nothing_to_reuse": "Nenhum outro aparelho desta placa aprendeu uma tecla ainda.",
+        "already_there": "{board} já tem {name}, com outro nome: é o mesmo aparelho, movido para lá antes. Apague em uma das placas antes."
+      },
+      "abort": {
+        "board_not_loaded": "A placa não está rodando agora. Confira se ela está online e tente de novo.",
+        "no_receiver": "Esta placa não tem GPIO de IRrecv, então não consegue aprender. Atribua um no template do Tasmota e recarregue a integração.",
+        "reconfigure_successful": "Salvo.",
+        "moved": "{name} agora está na {board}, no emissor {channel}.",
+        "copied": "A {board} agora também tem {name}, no emissor {channel}.",
+        "no_other_board": "Não há outra placa para onde levar. Adicione essa placa ao Tasmota IR primeiro."
+      }
+    },
+    "fan": {
+      "entry_type": "Ventilador",
+      "initiate_flow": {
+        "user": "Adicionar ventilador",
+        "reconfigure": "Gerenciar ventilador"
+      },
+      "step": {
+        "user": {
+          "title": "Adicionar ventilador",
+          "description": "Dê um nome e diga qual emissor aponta para ele. Depois vêm as funções: cada uma é aprendida pelo controle, tirada de uma tecla que outro aparelho desta placa já aprendeu, ou deixada de fora.",
+          "data": {
+            "name": "Nome",
+            "channel": "Emissor"
+          },
+          "data_description": {
+            "channel": "O emissor apontado para este aparelho, na ordem do template da placa. Os que já estão em uso mostram por qual aparelho. Dá para trocar depois, e testar, sem aprender nada de novo."
+          }
+        },
+        "functions": {
+          "title": "{name}",
+          "description": "Escolha uma função para aprender, reaproveitar ou limpar, o sensor de energia, ou Concluir. Aprendido até agora: {learned}.",
+          "data": {
+            "function": "Função"
+          }
+        },
+        "list_item": {
+          "title": "Qual?",
+          "description": "Dê um nome a este item de {command}, como HDMI 1, ou escolha um para aprender de novo ou limpar.",
+          "data": {
+            "item": "Nome"
+          }
+        },
+        "action": {
+          "title": "{command}",
+          "description": "Como {name} deve receber {command}?",
+          "menu_options": {
+            "learn_now": "Aprender agora, pelo controle",
+            "reuse": "Usar uma tecla que esta placa já aprendeu",
+            "clear": "Limpar"
+          }
+        },
+        "role_wait": {
+          "title": "Esperando a tecla"
+        },
+        "role_timeout": {
+          "title": "Nada chegou",
+          "description": "A placa não ouviu nenhuma tecla aproveitável em 30 segundos. Aponte o controle para o receptor e aperte a tecla uma vez, sozinha.",
+          "menu_options": {
+            "role_wait": "Tentar de novo",
+            "functions": "Voltar às funções"
+          }
+        },
+        "role_hvac": {
+          "title": "Esse é um controle de ar-condicionado",
+          "description": "Uma captura de controle de ar-condicionado é uma temperatura em um modo. Adicione a unidade por Adicionar ar-condicionado.",
+          "menu_options": {
+            "role_wait": "Tentar de novo",
+            "functions": "Voltar às funções"
+          }
+        },
+        "role_too_large": {
+          "title": "O código é grande demais",
+          "description": "Esta tecla chegou como código bruto maior do que a placa consegue mandar numa mensagem MQTT.",
+          "menu_options": {
+            "role_wait": "Tentar de novo",
+            "functions": "Voltar às funções"
+          }
+        },
+        "reuse": {
+          "title": "Usar uma tecla que esta placa já aprendeu",
+          "description": "Todas as teclas que os outros aparelhos desta placa aprenderam. O código é copiado: o outro aparelho continua com o dele.",
+          "data": {
+            "code": "Tecla"
+          }
+        },
+        "number": {
+          "title": "{command}",
+          "description": "Quantas velocidades a tecla cíclica percorre, quantos passos do mais fraco ao mais forte, ou quantos segundos a cortina leva de ponta a ponta. Deixe vazio para limpar.",
+          "data": {
+            "value": "Valor"
+          }
+        },
+        "sensor": {
+          "title": "Sensor de energia",
+          "description": "Opcional. Uma entidade que sabe se {name} está ligado de verdade: algo que liga e desliga junto com ele, ou um medidor de potência, com os watts acima dos quais conta como ligado. Deixe vazio para ir pelo que foi mandado e ouvido.",
+          "data": {
+            "power_sensor": "Sensor",
+            "power_threshold": "Ligado acima de"
+          }
+        },
+        "reconfigure": {
+          "title": "{name}",
+          "description": "{name} está no emissor {channel}. O que você quer fazer?",
+          "menu_options": {
+            "functions": "Funções",
+            "channel": "Trocar o emissor",
+            "rename": "Renomear",
+            "move": "Mover para outra placa",
+            "copy": "Copiar para outra placa"
+          }
+        },
+        "channel": {
+          "title": "Trocar o emissor",
+          "description": "Hoje {name} está no emissor {channel}. Escolha outro e ele é testado antes de salvar: os emissores já usados mostram por qual aparelho.",
+          "data": {
+            "channel": "Emissor"
+          }
+        },
+        "channel_test": {
+          "title": "Respondeu?",
+          "description": "Acabei de mandar {command} para {name} pelo emissor {channel}. O aparelho respondeu?",
+          "menu_options": {
+            "channel_save": "Sim, usar esse emissor",
+            "channel": "Não, tentar outro emissor"
+          }
+        },
+        "rename": {
+          "title": "Renomear",
+          "description": "Os botões, os códigos e o emissor continuam como estão.",
+          "data": {
+            "name": "Nome"
+          }
+        },
+        "move": {
+          "title": "Mover para outra placa",
+          "description": "Para qual placa {name} vai?",
+          "data": {
+            "board": "Placa"
+          }
+        },
+        "copy": {
+          "title": "Copiar para outra placa",
+          "description": "Qual placa recebe uma cópia de {name}?",
+          "data": {
+            "board": "Placa"
+          }
+        },
+        "move_target": {
+          "title": "Mover para outra placa",
+          "description": "{name} vai para {board} com todos os comandos aprendidos, e os botões continuam com os mesmos IDs de entidade, nomes e áreas. Escolha o emissor lá: os emissores já usados mostram por qual aparelho.",
+          "data": {
+            "channel": "Emissor",
+            "name": "Nome"
+          }
+        },
+        "copy_target": {
+          "title": "Copiar para outra placa",
+          "description": "{board} ganha o seu próprio {name}, com todos os comandos aprendidos, e este continua como está. Escolha o emissor lá: os emissores já usados mostram por qual aparelho.",
+          "data": {
+            "channel": "Emissor",
+            "name": "Nome"
+          }
+        }
+      },
+      "progress": {
+        "wait_for_key": "Aponte o controle de {name} para a placa e aperte {command} uma vez.\n\nEsperando até 30 segundos."
+      },
+      "error": {
+        "name_empty": "Dê um nome.",
+        "name_taken": "Outro aparelho desta placa já tem esse nome.",
+        "raw_channel": "O firmware desta placa não manda código bruto por esse emissor. Todo Tasmota depois da 15.6.0 manda, e os builds de self-labs.github.io/tasmota-kincony também.",
+        "not_confirmed": "A placa não confirmou o comando nesse emissor, então ele pode ou não ter saído. Confira se a placa está online e tente de novo.",
+        "board_offline": "A placa está offline, então nada foi enviado. Tente de novo quando ela voltar.",
+        "missing_power": "Aprenda o ligar: uma tecla que alterna, ou as duas teclas, de ligar e de desligar.",
+        "missing_open_close": "Aprenda abrir e fechar.",
+        "item_empty": "Dê um nome.",
+        "nothing_to_reuse": "Nenhum outro aparelho desta placa aprendeu uma tecla ainda.",
+        "already_there": "{board} já tem {name}, com outro nome: é o mesmo aparelho, movido para lá antes. Apague em uma das placas antes."
+      },
+      "abort": {
+        "board_not_loaded": "A placa não está rodando agora. Confira se ela está online e tente de novo.",
+        "no_receiver": "Esta placa não tem GPIO de IRrecv, então não consegue aprender. Atribua um no template do Tasmota e recarregue a integração.",
+        "reconfigure_successful": "Salvo.",
+        "moved": "{name} agora está na {board}, no emissor {channel}.",
+        "copied": "A {board} agora também tem {name}, no emissor {channel}.",
+        "no_other_board": "Não há outra placa para onde levar. Adicione essa placa ao Tasmota IR primeiro."
+      }
+    },
+    "light": {
+      "entry_type": "Luz",
+      "initiate_flow": {
+        "user": "Adicionar luz",
+        "reconfigure": "Gerenciar luz"
+      },
+      "step": {
+        "user": {
+          "title": "Adicionar luz",
+          "description": "Dê um nome e diga qual emissor aponta para ele. Depois vêm as funções: cada uma é aprendida pelo controle, tirada de uma tecla que outro aparelho desta placa já aprendeu, ou deixada de fora.",
+          "data": {
+            "name": "Nome",
+            "channel": "Emissor"
+          },
+          "data_description": {
+            "channel": "O emissor apontado para este aparelho, na ordem do template da placa. Os que já estão em uso mostram por qual aparelho. Dá para trocar depois, e testar, sem aprender nada de novo."
+          }
+        },
+        "functions": {
+          "title": "{name}",
+          "description": "Escolha uma função para aprender, reaproveitar ou limpar, o sensor de energia, ou Concluir. Aprendido até agora: {learned}.",
+          "data": {
+            "function": "Função"
+          }
+        },
+        "list_item": {
+          "title": "Qual?",
+          "description": "Dê um nome a este item de {command}, como HDMI 1, ou escolha um para aprender de novo ou limpar.",
+          "data": {
+            "item": "Nome"
+          }
+        },
+        "action": {
+          "title": "{command}",
+          "description": "Como {name} deve receber {command}?",
+          "menu_options": {
+            "learn_now": "Aprender agora, pelo controle",
+            "reuse": "Usar uma tecla que esta placa já aprendeu",
+            "clear": "Limpar"
+          }
+        },
+        "role_wait": {
+          "title": "Esperando a tecla"
+        },
+        "role_timeout": {
+          "title": "Nada chegou",
+          "description": "A placa não ouviu nenhuma tecla aproveitável em 30 segundos. Aponte o controle para o receptor e aperte a tecla uma vez, sozinha.",
+          "menu_options": {
+            "role_wait": "Tentar de novo",
+            "functions": "Voltar às funções"
+          }
+        },
+        "role_hvac": {
+          "title": "Esse é um controle de ar-condicionado",
+          "description": "Uma captura de controle de ar-condicionado é uma temperatura em um modo. Adicione a unidade por Adicionar ar-condicionado.",
+          "menu_options": {
+            "role_wait": "Tentar de novo",
+            "functions": "Voltar às funções"
+          }
+        },
+        "role_too_large": {
+          "title": "O código é grande demais",
+          "description": "Esta tecla chegou como código bruto maior do que a placa consegue mandar numa mensagem MQTT.",
+          "menu_options": {
+            "role_wait": "Tentar de novo",
+            "functions": "Voltar às funções"
+          }
+        },
+        "reuse": {
+          "title": "Usar uma tecla que esta placa já aprendeu",
+          "description": "Todas as teclas que os outros aparelhos desta placa aprenderam. O código é copiado: o outro aparelho continua com o dele.",
+          "data": {
+            "code": "Tecla"
+          }
+        },
+        "number": {
+          "title": "{command}",
+          "description": "Quantas velocidades a tecla cíclica percorre, quantos passos do mais fraco ao mais forte, ou quantos segundos a cortina leva de ponta a ponta. Deixe vazio para limpar.",
+          "data": {
+            "value": "Valor"
+          }
+        },
+        "sensor": {
+          "title": "Sensor de energia",
+          "description": "Opcional. Uma entidade que sabe se {name} está ligado de verdade: algo que liga e desliga junto com ele, ou um medidor de potência, com os watts acima dos quais conta como ligado. Deixe vazio para ir pelo que foi mandado e ouvido.",
+          "data": {
+            "power_sensor": "Sensor",
+            "power_threshold": "Ligado acima de"
+          }
+        },
+        "reconfigure": {
+          "title": "{name}",
+          "description": "{name} está no emissor {channel}. O que você quer fazer?",
+          "menu_options": {
+            "functions": "Funções",
+            "channel": "Trocar o emissor",
+            "rename": "Renomear",
+            "move": "Mover para outra placa",
+            "copy": "Copiar para outra placa"
+          }
+        },
+        "channel": {
+          "title": "Trocar o emissor",
+          "description": "Hoje {name} está no emissor {channel}. Escolha outro e ele é testado antes de salvar: os emissores já usados mostram por qual aparelho.",
+          "data": {
+            "channel": "Emissor"
+          }
+        },
+        "channel_test": {
+          "title": "Respondeu?",
+          "description": "Acabei de mandar {command} para {name} pelo emissor {channel}. O aparelho respondeu?",
+          "menu_options": {
+            "channel_save": "Sim, usar esse emissor",
+            "channel": "Não, tentar outro emissor"
+          }
+        },
+        "rename": {
+          "title": "Renomear",
+          "description": "Os botões, os códigos e o emissor continuam como estão.",
+          "data": {
+            "name": "Nome"
+          }
+        },
+        "move": {
+          "title": "Mover para outra placa",
+          "description": "Para qual placa {name} vai?",
+          "data": {
+            "board": "Placa"
+          }
+        },
+        "copy": {
+          "title": "Copiar para outra placa",
+          "description": "Qual placa recebe uma cópia de {name}?",
+          "data": {
+            "board": "Placa"
+          }
+        },
+        "move_target": {
+          "title": "Mover para outra placa",
+          "description": "{name} vai para {board} com todos os comandos aprendidos, e os botões continuam com os mesmos IDs de entidade, nomes e áreas. Escolha o emissor lá: os emissores já usados mostram por qual aparelho.",
+          "data": {
+            "channel": "Emissor",
+            "name": "Nome"
+          }
+        },
+        "copy_target": {
+          "title": "Copiar para outra placa",
+          "description": "{board} ganha o seu próprio {name}, com todos os comandos aprendidos, e este continua como está. Escolha o emissor lá: os emissores já usados mostram por qual aparelho.",
+          "data": {
+            "channel": "Emissor",
+            "name": "Nome"
+          }
+        }
+      },
+      "progress": {
+        "wait_for_key": "Aponte o controle de {name} para a placa e aperte {command} uma vez.\n\nEsperando até 30 segundos."
+      },
+      "error": {
+        "name_empty": "Dê um nome.",
+        "name_taken": "Outro aparelho desta placa já tem esse nome.",
+        "raw_channel": "O firmware desta placa não manda código bruto por esse emissor. Todo Tasmota depois da 15.6.0 manda, e os builds de self-labs.github.io/tasmota-kincony também.",
+        "not_confirmed": "A placa não confirmou o comando nesse emissor, então ele pode ou não ter saído. Confira se a placa está online e tente de novo.",
+        "board_offline": "A placa está offline, então nada foi enviado. Tente de novo quando ela voltar.",
+        "missing_power": "Aprenda o ligar: uma tecla que alterna, ou as duas teclas, de ligar e de desligar.",
+        "missing_open_close": "Aprenda abrir e fechar.",
+        "item_empty": "Dê um nome.",
+        "nothing_to_reuse": "Nenhum outro aparelho desta placa aprendeu uma tecla ainda.",
+        "already_there": "{board} já tem {name}, com outro nome: é o mesmo aparelho, movido para lá antes. Apague em uma das placas antes."
+      },
+      "abort": {
+        "board_not_loaded": "A placa não está rodando agora. Confira se ela está online e tente de novo.",
+        "no_receiver": "Esta placa não tem GPIO de IRrecv, então não consegue aprender. Atribua um no template do Tasmota e recarregue a integração.",
+        "reconfigure_successful": "Salvo.",
+        "moved": "{name} agora está na {board}, no emissor {channel}.",
+        "copied": "A {board} agora também tem {name}, no emissor {channel}.",
+        "no_other_board": "Não há outra placa para onde levar. Adicione essa placa ao Tasmota IR primeiro."
+      }
+    },
+    "cover": {
+      "entry_type": "Cortina",
+      "initiate_flow": {
+        "user": "Adicionar cortina",
+        "reconfigure": "Gerenciar cortina"
+      },
+      "step": {
+        "user": {
+          "title": "Adicionar cortina",
+          "description": "Dê um nome e diga qual emissor aponta para ele. Depois vêm as funções: cada uma é aprendida pelo controle, tirada de uma tecla que outro aparelho desta placa já aprendeu, ou deixada de fora.",
+          "data": {
+            "name": "Nome",
+            "channel": "Emissor"
+          },
+          "data_description": {
+            "channel": "O emissor apontado para este aparelho, na ordem do template da placa. Os que já estão em uso mostram por qual aparelho. Dá para trocar depois, e testar, sem aprender nada de novo."
+          }
+        },
+        "functions": {
+          "title": "{name}",
+          "description": "Escolha uma função para aprender, reaproveitar ou limpar, o sensor de energia, ou Concluir. Aprendido até agora: {learned}.",
+          "data": {
+            "function": "Função"
+          }
+        },
+        "list_item": {
+          "title": "Qual?",
+          "description": "Dê um nome a este item de {command}, como HDMI 1, ou escolha um para aprender de novo ou limpar.",
+          "data": {
+            "item": "Nome"
+          }
+        },
+        "action": {
+          "title": "{command}",
+          "description": "Como {name} deve receber {command}?",
+          "menu_options": {
+            "learn_now": "Aprender agora, pelo controle",
+            "reuse": "Usar uma tecla que esta placa já aprendeu",
+            "clear": "Limpar"
+          }
+        },
+        "role_wait": {
+          "title": "Esperando a tecla"
+        },
+        "role_timeout": {
+          "title": "Nada chegou",
+          "description": "A placa não ouviu nenhuma tecla aproveitável em 30 segundos. Aponte o controle para o receptor e aperte a tecla uma vez, sozinha.",
+          "menu_options": {
+            "role_wait": "Tentar de novo",
+            "functions": "Voltar às funções"
+          }
+        },
+        "role_hvac": {
+          "title": "Esse é um controle de ar-condicionado",
+          "description": "Uma captura de controle de ar-condicionado é uma temperatura em um modo. Adicione a unidade por Adicionar ar-condicionado.",
+          "menu_options": {
+            "role_wait": "Tentar de novo",
+            "functions": "Voltar às funções"
+          }
+        },
+        "role_too_large": {
+          "title": "O código é grande demais",
+          "description": "Esta tecla chegou como código bruto maior do que a placa consegue mandar numa mensagem MQTT.",
+          "menu_options": {
+            "role_wait": "Tentar de novo",
+            "functions": "Voltar às funções"
+          }
+        },
+        "reuse": {
+          "title": "Usar uma tecla que esta placa já aprendeu",
+          "description": "Todas as teclas que os outros aparelhos desta placa aprenderam. O código é copiado: o outro aparelho continua com o dele.",
+          "data": {
+            "code": "Tecla"
+          }
+        },
+        "number": {
+          "title": "{command}",
+          "description": "Quantas velocidades a tecla cíclica percorre, quantos passos do mais fraco ao mais forte, ou quantos segundos a cortina leva de ponta a ponta. Deixe vazio para limpar.",
+          "data": {
+            "value": "Valor"
+          }
+        },
+        "sensor": {
+          "title": "Sensor de energia",
+          "description": "Opcional. Uma entidade que sabe se {name} está ligado de verdade: algo que liga e desliga junto com ele, ou um medidor de potência, com os watts acima dos quais conta como ligado. Deixe vazio para ir pelo que foi mandado e ouvido.",
+          "data": {
+            "power_sensor": "Sensor",
+            "power_threshold": "Ligado acima de"
+          }
+        },
+        "reconfigure": {
+          "title": "{name}",
+          "description": "{name} está no emissor {channel}. O que você quer fazer?",
+          "menu_options": {
+            "functions": "Funções",
+            "channel": "Trocar o emissor",
+            "rename": "Renomear",
+            "move": "Mover para outra placa",
+            "copy": "Copiar para outra placa"
+          }
+        },
+        "channel": {
+          "title": "Trocar o emissor",
+          "description": "Hoje {name} está no emissor {channel}. Escolha outro e ele é testado antes de salvar: os emissores já usados mostram por qual aparelho.",
+          "data": {
+            "channel": "Emissor"
+          }
+        },
+        "channel_test": {
+          "title": "Respondeu?",
+          "description": "Acabei de mandar {command} para {name} pelo emissor {channel}. O aparelho respondeu?",
+          "menu_options": {
+            "channel_save": "Sim, usar esse emissor",
+            "channel": "Não, tentar outro emissor"
+          }
+        },
+        "rename": {
+          "title": "Renomear",
+          "description": "Os botões, os códigos e o emissor continuam como estão.",
+          "data": {
+            "name": "Nome"
+          }
+        },
+        "move": {
+          "title": "Mover para outra placa",
+          "description": "Para qual placa {name} vai?",
+          "data": {
+            "board": "Placa"
+          }
+        },
+        "copy": {
+          "title": "Copiar para outra placa",
+          "description": "Qual placa recebe uma cópia de {name}?",
+          "data": {
+            "board": "Placa"
+          }
+        },
+        "move_target": {
+          "title": "Mover para outra placa",
+          "description": "{name} vai para {board} com todos os comandos aprendidos, e os botões continuam com os mesmos IDs de entidade, nomes e áreas. Escolha o emissor lá: os emissores já usados mostram por qual aparelho.",
+          "data": {
+            "channel": "Emissor",
+            "name": "Nome"
+          }
+        },
+        "copy_target": {
+          "title": "Copiar para outra placa",
+          "description": "{board} ganha o seu próprio {name}, com todos os comandos aprendidos, e este continua como está. Escolha o emissor lá: os emissores já usados mostram por qual aparelho.",
+          "data": {
+            "channel": "Emissor",
+            "name": "Nome"
+          }
+        }
+      },
+      "progress": {
+        "wait_for_key": "Aponte o controle de {name} para a placa e aperte {command} uma vez.\n\nEsperando até 30 segundos."
+      },
+      "error": {
+        "name_empty": "Dê um nome.",
+        "name_taken": "Outro aparelho desta placa já tem esse nome.",
+        "raw_channel": "O firmware desta placa não manda código bruto por esse emissor. Todo Tasmota depois da 15.6.0 manda, e os builds de self-labs.github.io/tasmota-kincony também.",
+        "not_confirmed": "A placa não confirmou o comando nesse emissor, então ele pode ou não ter saído. Confira se a placa está online e tente de novo.",
+        "board_offline": "A placa está offline, então nada foi enviado. Tente de novo quando ela voltar.",
+        "missing_power": "Aprenda o ligar: uma tecla que alterna, ou as duas teclas, de ligar e de desligar.",
+        "missing_open_close": "Aprenda abrir e fechar.",
+        "item_empty": "Dê um nome.",
+        "nothing_to_reuse": "Nenhum outro aparelho desta placa aprendeu uma tecla ainda.",
+        "already_there": "{board} já tem {name}, com outro nome: é o mesmo aparelho, movido para lá antes. Apague em uma das placas antes."
+      },
+      "abort": {
+        "board_not_loaded": "A placa não está rodando agora. Confira se ela está online e tente de novo.",
+        "no_receiver": "Esta placa não tem GPIO de IRrecv, então não consegue aprender. Atribua um no template do Tasmota e recarregue a integração.",
+        "reconfigure_successful": "Salvo.",
+        "moved": "{name} agora está na {board}, no emissor {channel}.",
+        "copied": "A {board} agora também tem {name}, no emissor {channel}.",
+        "no_other_board": "Não há outra placa para onde levar. Adicione essa placa ao Tasmota IR primeiro."
+      }
+    },
+    "switch": {
+      "entry_type": "Liga e desliga",
+      "initiate_flow": {
+        "user": "Adicionar liga e desliga",
+        "reconfigure": "Gerenciar liga e desliga"
+      },
+      "step": {
+        "user": {
+          "title": "Adicionar liga e desliga",
+          "description": "Dê um nome e diga qual emissor aponta para ele. Depois vêm as funções: cada uma é aprendida pelo controle, tirada de uma tecla que outro aparelho desta placa já aprendeu, ou deixada de fora.",
+          "data": {
+            "name": "Nome",
+            "channel": "Emissor"
+          },
+          "data_description": {
+            "channel": "O emissor apontado para este aparelho, na ordem do template da placa. Os que já estão em uso mostram por qual aparelho. Dá para trocar depois, e testar, sem aprender nada de novo."
+          }
+        },
+        "functions": {
+          "title": "{name}",
+          "description": "Escolha uma função para aprender, reaproveitar ou limpar, o sensor de energia, ou Concluir. Aprendido até agora: {learned}.",
+          "data": {
+            "function": "Função"
+          }
+        },
+        "list_item": {
+          "title": "Qual?",
+          "description": "Dê um nome a este item de {command}, como HDMI 1, ou escolha um para aprender de novo ou limpar.",
+          "data": {
+            "item": "Nome"
+          }
+        },
+        "action": {
+          "title": "{command}",
+          "description": "Como {name} deve receber {command}?",
+          "menu_options": {
+            "learn_now": "Aprender agora, pelo controle",
+            "reuse": "Usar uma tecla que esta placa já aprendeu",
+            "clear": "Limpar"
+          }
+        },
+        "role_wait": {
+          "title": "Esperando a tecla"
+        },
+        "role_timeout": {
+          "title": "Nada chegou",
+          "description": "A placa não ouviu nenhuma tecla aproveitável em 30 segundos. Aponte o controle para o receptor e aperte a tecla uma vez, sozinha.",
+          "menu_options": {
+            "role_wait": "Tentar de novo",
+            "functions": "Voltar às funções"
+          }
+        },
+        "role_hvac": {
+          "title": "Esse é um controle de ar-condicionado",
+          "description": "Uma captura de controle de ar-condicionado é uma temperatura em um modo. Adicione a unidade por Adicionar ar-condicionado.",
+          "menu_options": {
+            "role_wait": "Tentar de novo",
+            "functions": "Voltar às funções"
+          }
+        },
+        "role_too_large": {
+          "title": "O código é grande demais",
+          "description": "Esta tecla chegou como código bruto maior do que a placa consegue mandar numa mensagem MQTT.",
+          "menu_options": {
+            "role_wait": "Tentar de novo",
+            "functions": "Voltar às funções"
+          }
+        },
+        "reuse": {
+          "title": "Usar uma tecla que esta placa já aprendeu",
+          "description": "Todas as teclas que os outros aparelhos desta placa aprenderam. O código é copiado: o outro aparelho continua com o dele.",
+          "data": {
+            "code": "Tecla"
+          }
+        },
+        "number": {
+          "title": "{command}",
+          "description": "Quantas velocidades a tecla cíclica percorre, quantos passos do mais fraco ao mais forte, ou quantos segundos a cortina leva de ponta a ponta. Deixe vazio para limpar.",
+          "data": {
+            "value": "Valor"
+          }
+        },
+        "sensor": {
+          "title": "Sensor de energia",
+          "description": "Opcional. Uma entidade que sabe se {name} está ligado de verdade: algo que liga e desliga junto com ele, ou um medidor de potência, com os watts acima dos quais conta como ligado. Deixe vazio para ir pelo que foi mandado e ouvido.",
+          "data": {
+            "power_sensor": "Sensor",
+            "power_threshold": "Ligado acima de"
+          }
+        },
+        "reconfigure": {
+          "title": "{name}",
+          "description": "{name} está no emissor {channel}. O que você quer fazer?",
+          "menu_options": {
+            "functions": "Funções",
+            "channel": "Trocar o emissor",
+            "rename": "Renomear",
+            "move": "Mover para outra placa",
+            "copy": "Copiar para outra placa"
+          }
+        },
+        "channel": {
+          "title": "Trocar o emissor",
+          "description": "Hoje {name} está no emissor {channel}. Escolha outro e ele é testado antes de salvar: os emissores já usados mostram por qual aparelho.",
+          "data": {
+            "channel": "Emissor"
+          }
+        },
+        "channel_test": {
+          "title": "Respondeu?",
+          "description": "Acabei de mandar {command} para {name} pelo emissor {channel}. O aparelho respondeu?",
+          "menu_options": {
+            "channel_save": "Sim, usar esse emissor",
+            "channel": "Não, tentar outro emissor"
+          }
+        },
+        "rename": {
+          "title": "Renomear",
+          "description": "Os botões, os códigos e o emissor continuam como estão.",
+          "data": {
+            "name": "Nome"
+          }
+        },
+        "move": {
+          "title": "Mover para outra placa",
+          "description": "Para qual placa {name} vai?",
+          "data": {
+            "board": "Placa"
+          }
+        },
+        "copy": {
+          "title": "Copiar para outra placa",
+          "description": "Qual placa recebe uma cópia de {name}?",
+          "data": {
+            "board": "Placa"
+          }
+        },
+        "move_target": {
+          "title": "Mover para outra placa",
+          "description": "{name} vai para {board} com todos os comandos aprendidos, e os botões continuam com os mesmos IDs de entidade, nomes e áreas. Escolha o emissor lá: os emissores já usados mostram por qual aparelho.",
+          "data": {
+            "channel": "Emissor",
+            "name": "Nome"
+          }
+        },
+        "copy_target": {
+          "title": "Copiar para outra placa",
+          "description": "{board} ganha o seu próprio {name}, com todos os comandos aprendidos, e este continua como está. Escolha o emissor lá: os emissores já usados mostram por qual aparelho.",
+          "data": {
+            "channel": "Emissor",
+            "name": "Nome"
+          }
+        }
+      },
+      "progress": {
+        "wait_for_key": "Aponte o controle de {name} para a placa e aperte {command} uma vez.\n\nEsperando até 30 segundos."
+      },
+      "error": {
+        "name_empty": "Dê um nome.",
+        "name_taken": "Outro aparelho desta placa já tem esse nome.",
+        "raw_channel": "O firmware desta placa não manda código bruto por esse emissor. Todo Tasmota depois da 15.6.0 manda, e os builds de self-labs.github.io/tasmota-kincony também.",
+        "not_confirmed": "A placa não confirmou o comando nesse emissor, então ele pode ou não ter saído. Confira se a placa está online e tente de novo.",
+        "board_offline": "A placa está offline, então nada foi enviado. Tente de novo quando ela voltar.",
+        "missing_power": "Aprenda o ligar: uma tecla que alterna, ou as duas teclas, de ligar e de desligar.",
+        "missing_open_close": "Aprenda abrir e fechar.",
+        "item_empty": "Dê um nome.",
+        "nothing_to_reuse": "Nenhum outro aparelho desta placa aprendeu uma tecla ainda.",
+        "already_there": "{board} já tem {name}, com outro nome: é o mesmo aparelho, movido para lá antes. Apague em uma das placas antes."
+      },
+      "abort": {
+        "board_not_loaded": "A placa não está rodando agora. Confira se ela está online e tente de novo.",
+        "no_receiver": "Esta placa não tem GPIO de IRrecv, então não consegue aprender. Atribua um no template do Tasmota e recarregue a integração.",
+        "reconfigure_successful": "Salvo.",
+        "moved": "{name} agora está na {board}, no emissor {channel}.",
+        "copied": "A {board} agora também tem {name}, no emissor {channel}.",
+        "no_other_board": "Não há outra placa para onde levar. Adicione essa placa ao Tasmota IR primeiro."
+      }
+    },
+    "sequence": {
+      "entry_type": "Sequência",
+      "initiate_flow": {
+        "user": "Adicionar sequência",
+        "reconfigure": "Gerenciar sequência"
+      },
+      "step": {
+        "user": {
+          "title": "Adicionar sequência",
+          "description": "Um nome para o botão que a executa, como Cinema. Depois os passos: cada um é uma tecla de um aparelho desta placa, apertada na ordem.",
+          "data": {
+            "name": "Nome"
+          }
+        },
+        "steps": {
+          "title": "{name}",
+          "description": "Passos até agora:\n{steps}\n\nO tempo entre parênteses é a espera antes do próximo passo. ⚠ marca um passo cujo aparelho ou tecla não está mais nesta placa.",
+          "data": {
+            "action": "O que fazer"
+          }
+        },
+        "add_step": {
+          "title": "Adicionar um passo",
+          "description": "Uma tecla de um aparelho desta placa, e quanto esperar depois dela antes do próximo passo: uma TV que acabou de ligar pode levar alguns segundos para aceitar uma fonte.",
+          "data": {
+            "step": "Tecla",
+            "wait": "Esperar depois"
+          }
+        },
+        "remove_step": {
+          "title": "Remover um passo",
+          "description": "Qual passo de {name} sai.",
+          "data": {
+            "step": "Passo"
+          }
+        },
+        "reconfigure": {
+          "title": "{name}",
+          "description": "Passos de {name}: {count}. O que você quer fazer?",
+          "menu_options": {
+            "steps": "Passos",
+            "rename": "Renomear"
+          }
+        },
+        "rename": {
+          "title": "Renomear",
+          "description": "Os passos continuam como estão.",
+          "data": {
+            "name": "Nome"
+          }
+        }
+      },
+      "error": {
+        "name_empty": "Dê um nome.",
+        "name_taken": "Outro aparelho desta placa já tem esse nome.",
+        "no_steps": "Adicione pelo menos um passo.",
+        "nothing_to_add": "Nenhum aparelho desta placa tem uma tecla para apertar ainda. Aprenda uma antes."
+      },
+      "abort": {
+        "board_not_loaded": "A placa não está rodando agora. Confira se ela está online e tente de novo.",
+        "reconfigure_successful": "Salvo."
+      }
     }
   },
   "selector": {
+    "extra": {
+      "options": {
+        "turbo": "Turbo",
+        "econo": "Econômico",
+        "quiet": "Silencioso",
+        "sleep": "Sleep",
+        "light": "Display",
+        "beep": "Bipe",
+        "clean": "Limpeza",
+        "filter": "Filtro"
+      }
+    },
     "hvac_mode": {
       "options": {
         "off": "Desligado",
@@ -329,9 +1310,67 @@
         "fan_only": "Só ventilar",
         "auto": "Automático"
       }
+    },
+    "function": {
+      "options": {
+        "power": "Ligar (uma tecla que alterna)",
+        "power_on": "Ligar",
+        "power_off": "Desligar",
+        "volume_up": "Volume +",
+        "volume_down": "Volume -",
+        "mute": "Mudo",
+        "sources": "Fontes",
+        "channel_up": "Canal +",
+        "channel_down": "Canal -",
+        "play_pause": "Play e pausa",
+        "speeds": "Velocidades (uma tecla por velocidade)",
+        "speed_cycle": "Velocidade (uma tecla que alterna)",
+        "speed_count": "Número de velocidades",
+        "oscillate": "Oscilar",
+        "presets": "Modos",
+        "brightness_up": "Mais forte",
+        "brightness_down": "Mais fraco",
+        "brightness_steps": "Passos de brilho",
+        "warmer": "Mais quente",
+        "cooler": "Mais fria",
+        "color_temp_steps": "Passos de cor",
+        "effects": "Efeitos e cores",
+        "open": "Abrir",
+        "close": "Fechar",
+        "stop": "Parar",
+        "travel_time": "Tempo de curso",
+        "sensor": "Sensor de energia",
+        "finish": "Concluir"
+      }
+    },
+    "sequence_action": {
+      "options": {
+        "add_step": "Adicionar um passo",
+        "remove_step": "Remover um passo",
+        "finish": "Concluir"
+      }
     }
   },
   "entity": {
+    "switch": {
+      "display": {
+        "name": "Display"
+      },
+      "beep": {
+        "name": "Bipe"
+      },
+      "self_clean": {
+        "name": "Limpeza"
+      },
+      "filter": {
+        "name": "Filtro"
+      }
+    },
+    "infrared": {
+      "infrared_receiver": {
+        "name": "Receptor infravermelho"
+      }
+    },
     "remote": {
       "tasmota_ir": {
         "name": "[%key:component::tasmota_ir::title%]"
@@ -340,6 +1379,15 @@
     "climate": {
       "air_conditioner": {
         "state_attributes": {
+          "preset_mode": {
+            "state": {
+              "none": "Nenhum",
+              "boost": "Turbo",
+              "eco": "Econômico",
+              "quiet": "Silencioso",
+              "sleep": "Sleep"
+            }
+          },
           "swing_mode": {
             "state": {
               "off": "Parada",
@@ -365,7 +1413,44 @@
           }
         }
       }
+    },
+    "event": {
+      "remote": {
+        "name": "Controle"
+      }
     }
   },
-  "title": "Tasmota IR"
+  "title": "Tasmota IR",
+  "options": {
+    "step": {
+      "init": {
+        "title": "Placa",
+        "menu_options": {
+          "move_all": "Mover tudo para outra placa"
+        }
+      },
+      "move_all": {
+        "title": "Mover tudo para outra placa",
+        "description": "Para qual placa vão todos os aparelhos desta?",
+        "data": {
+          "board": "Placa"
+        }
+      },
+      "move_all_emitters": {
+        "title": "Mover tudo para {board}",
+        "description": "O emissor que cada aparelho vai usar em {board}; os emissores já em uso lá dizem qual aparelho está neles. Cada aparelho leva os códigos, as funções e os ajustes, e as entidades mantêm ids, nomes e áreas. Apague esta placa depois, quando tudo estiver funcionando lá. As sequências vão junto como estão: elas não têm emissor."
+      }
+    },
+    "error": {
+      "names_taken": "{board} já tem aparelhos com estes nomes: {names}. Renomeie em uma das placas antes.",
+      "already_there": "{board} já tem estes mesmos aparelhos, com outros nomes: {names}. Apague em uma das placas antes.",
+      "changed": "Os aparelhos desta placa mudaram enquanto esta tela estava aberta. Confira os emissores de novo."
+    },
+    "abort": {
+      "no_other_board": "Não há outra placa para onde mandar. Adicione essa placa ao Tasmota IR antes.",
+      "nothing_to_move": "Esta placa não tem aparelhos.",
+      "moved_all": "Tudo está em {board} agora. Movidos: {count}.",
+      "board_not_loaded": "A placa não está rodando agora. Confira se ela está online e tente de novo."
+    }
+  }
 }

@@ -5,48 +5,31 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-from typing import Any
 
 import pytest
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import HomeAssistantError
 from pytest_homeassistant_custom_component.common import async_fire_mqtt_message
 
 from custom_components.tasmota_ir import coordinator as coordinator_module
+from custom_components.tasmota_ir.coordinator import (
+    CodeTooLargeError,
+    RawChannelError,
+)
 
-from .conftest import TOPIC, board_entry, setup_board
+from .conftest import (
+    DONE,
+    NEC_POWER,
+    TOPIC,
+    WRONG,
+    Board,
+    board_entry,
+    receive,
+    setup_board,
+)
 
 RAW = "+8570-4240+550-1580C-510+565-1565F-505Fh"
 RAW_CODE = {"Protocol": "RAW", "RawData": RAW, "Frequency": 38000}
-IRSEND = f"cmnd/{TOPIC}/IRSend"
-DONE = {"IRSend": "Done"}
-# What a firmware without arendst/Tasmota#25062 answers to raw data as JSON.
-WRONG = {"IRSend": "Wrong Protocol (NEC,SONY,RC5)"}
-
-
-class Board:
-    """The board's side of IRSend: records what arrives, answers JSON with ``reply``."""
-
-    def __init__(
-        self, hass: HomeAssistant, mqtt_client_mock, reply: dict[str, Any] | None
-    ) -> None:
-        self.sent: list[str] = []
-        self.reply = reply
-        original = mqtt_client_mock.publish.side_effect
-
-        def _publish(topic, payload=None, qos=0, retain=False, *args, **kwargs):
-            text = payload.decode() if isinstance(payload, bytes) else (payload or "")
-            if topic == IRSEND:
-                self.sent.append(text)
-                if self.reply is not None and text.startswith("{"):
-                    hass.loop.call_soon(
-                        async_fire_mqtt_message,
-                        hass,
-                        f"stat/{TOPIC}/RESULT",
-                        json.dumps(self.reply),
-                    )
-            return original(topic, payload, qos, retain, *args, **kwargs)
-
-        mqtt_client_mock.publish.side_effect = _publish
 
 
 async def test_emitter_one_keeps_the_plain_form(
@@ -147,3 +130,141 @@ async def test_no_answer_sends_nothing_more(
 
     assert len(board.sent) == 1
     assert board.sent[0].startswith("{")
+
+
+async def test_without_fallback_emitter_one_is_the_plain_form(
+    hass: HomeAssistant, mqtt_mock, mqtt_client_mock
+) -> None:
+    entry = await setup_board(hass, board_entry())
+    board = Board(hass, mqtt_client_mock, DONE)
+
+    await entry.runtime_data.async_send_compact(RAW, 38000, 1, fallback=False)
+    await hass.async_block_till_done()
+
+    assert board.sent == [f"38000,{RAW}"]
+
+
+async def test_without_fallback_an_older_firmware_is_an_error(
+    hass: HomeAssistant, mqtt_mock, mqtt_client_mock
+) -> None:
+    """Another integration asked for this emitter; emitter 1 would fail in silence."""
+    entry = await setup_board(hass, board_entry())
+    board = Board(hass, mqtt_client_mock, WRONG)
+
+    with pytest.raises(RawChannelError, match="15.6.0"):
+        await entry.runtime_data.async_send_compact(RAW, 38000, 3, fallback=False)
+    await hass.async_block_till_done()
+    assert len(board.sent) == 1
+    assert board.sent[0].startswith("{")
+
+    # Known now: refused straight away, and still nothing in the plain form.
+    with pytest.raises(RawChannelError):
+        await entry.runtime_data.async_send_compact(RAW, 38000, 3, fallback=False)
+    await hass.async_block_till_done()
+    assert len(board.sent) == 1
+
+
+async def test_without_fallback_no_answer_is_an_error(
+    hass: HomeAssistant,
+    mqtt_mock,
+    mqtt_client_mock,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setattr(coordinator_module, "RAW_REPLY_TIMEOUT", 0.05)
+    entry = await setup_board(hass, board_entry())
+    board = Board(hass, mqtt_client_mock, None)
+
+    with pytest.raises(HomeAssistantError, match="did not confirm"):
+        await entry.runtime_data.async_send_compact(RAW, 38000, 3, fallback=False)
+    await hass.async_block_till_done()
+    assert len(board.sent) == 1
+
+
+async def test_without_fallback_too_large_is_an_error(
+    hass: HomeAssistant, mqtt_mock, mqtt_client_mock
+) -> None:
+    entry = await setup_board(hass, board_entry())
+    board = Board(hass, mqtt_client_mock, DONE)
+    big = "+1000" * 250
+
+    with pytest.raises(CodeTooLargeError):
+        await entry.runtime_data.async_send_compact(big, 38000, 3, fallback=False)
+    with pytest.raises(CodeTooLargeError):
+        await entry.runtime_data.async_send_compact(big, 38000, 1, fallback=False)
+    await hass.async_block_till_done()
+    assert board.sent == []
+
+
+async def test_frames_reach_every_listener_decoded_once(
+    hass: HomeAssistant, mqtt_mock, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    entry = await setup_board(hass, board_entry())
+    calls: list[str] = []
+    real = coordinator_module.decode_compact
+
+    def counting(raw: str) -> list[int]:
+        calls.append(raw)
+        return real(raw)
+
+    monkeypatch.setattr(coordinator_module, "decode_compact", counting)
+    got_a: list[list[int]] = []
+    got_b: list[list[int]] = []
+    entry.runtime_data.async_add_timings_listener(got_a.append)
+    entry.runtime_data.async_add_timings_listener(got_b.append)
+
+    receive(hass, {**NEC_POWER, "RawData": "+9000-4500+560c"})
+    await hass.async_block_till_done()
+
+    assert got_a == got_b == [[9000, -4500, 560, -560]]
+    assert len(calls) == 1
+
+
+async def test_frames_without_rawdata_warn_once(
+    hass: HomeAssistant, mqtt_mock, caplog: pytest.LogCaptureFixture
+) -> None:
+    entry = await setup_board(hass, board_entry())
+    got: list[list[int]] = []
+    entry.runtime_data.async_add_timings_listener(got.append)
+
+    with caplog.at_level(logging.WARNING):
+        receive(hass, NEC_POWER)
+        receive(hass, NEC_POWER)
+        await hass.async_block_till_done()
+
+    assert got == []
+    assert caplog.text.count("SetOption58") == 1
+
+
+async def test_no_listener_no_warning(
+    hass: HomeAssistant, mqtt_mock, caplog: pytest.LogCaptureFixture
+) -> None:
+    """A board nobody listens to through infrared never nags about SetOption58."""
+    await setup_board(hass, board_entry())
+    with caplog.at_level(logging.WARNING):
+        receive(hass, NEC_POWER)
+        await hass.async_block_till_done()
+    assert "SetOption58" not in caplog.text
+
+
+async def test_garbage_rawdata_is_not_relayed(hass: HomeAssistant, mqtt_mock) -> None:
+    entry = await setup_board(hass, board_entry())
+    got: list[list[int]] = []
+    entry.runtime_data.async_add_timings_listener(got.append)
+
+    receive(hass, {**NEC_POWER, "RawData": "+9000-4500Z"})
+    await hass.async_block_till_done()
+
+    assert got == []
+    assert entry.runtime_data.available
+
+
+async def test_a_removed_listener_hears_nothing(hass: HomeAssistant, mqtt_mock) -> None:
+    entry = await setup_board(hass, board_entry())
+    got: list[list[int]] = []
+    remove = entry.runtime_data.async_add_timings_listener(got.append)
+    remove()
+
+    receive(hass, {**NEC_POWER, "RawData": "+9000-4500+560c"})
+    await hass.async_block_till_done()
+
+    assert got == []

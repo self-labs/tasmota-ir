@@ -26,6 +26,7 @@ from homeassistant.helpers.entity_registry import async_get as async_get_entity_
 from .const import DOMAIN, SIGNAL_CODES_UPDATED
 from .coordinator import Appliance, CodeTooLargeError, TasmotaIrCoordinator
 from .entity import TasmotaIrEntity
+from .sequence import TasmotaIrSequenceButton
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -76,6 +77,11 @@ async def async_setup_entry(
         known.update(current)
 
     _sync()
+    for sequence in coordinator.sequences.values():
+        async_add_entities(
+            [TasmotaIrSequenceButton(coordinator, sequence)],
+            config_subentry_id=sequence.subentry_id,
+        )
     entry.async_on_unload(
         async_dispatcher_connect(
             hass, SIGNAL_CODES_UPDATED.format(entry_id=entry.entry_id), _sync

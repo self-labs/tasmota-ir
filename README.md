@@ -24,15 +24,32 @@ never typed is a channel that is never typed wrong.
 
 ## What you get
 
-| Entity    | One per               | Example                      | What it does                                                        |
-| --------- | --------------------- | ---------------------------- | ------------------------------------------------------------------- |
-| `remote`  | board                 | `remote.hubb_ir1`            | `learn_command`, `send_command` and `delete_command`, as actions    |
-| `event`   | board with a receiver | `event.hubb_ir1_ir_receiver` | fires on every frame the receiver decodes, from any remote          |
-| `button`  | learned key           | `button.tv_quarto_power`     | sends that key through its appliance's emitter                      |
-| `climate` | air conditioner       | `climate.ar_escritorio`      | modes, temperature, fan and vane, following the physical remote too |
+| Entity         | One per                               | Example                                | What it does                                                              |
+| -------------- | ------------------------------------- | -------------------------------------- | ------------------------------------------------------------------------- |
+| `remote`       | board                                 | `remote.hubb_ir1`                      | `learn_command`, `send_command` and `delete_command`, as actions          |
+| `event`        | board with a receiver                 | `event.hubb_ir1_ir_receiver`           | fires on every frame the receiver decodes, from any remote                |
+| `event`        | appliance, on a board with a receiver | `event.tv_quarto_remote`               | fires with the key's name when that appliance's own remote is pressed     |
+| `button`       | learned key                           | `button.tv_quarto_power`               | sends that key through its appliance's emitter                            |
+| `climate`      | air conditioner                       | `climate.ar_escritorio`                | modes, temperature, fan and vane, following the physical remote too       |
+| `infrared`     | appliance                             | `infrared.tv_quarto`                   | the emitter Home Assistant's own IR integrations send through             |
+| `infrared`     | appliance, on a board with a receiver | `infrared.tv_quarto_infrared_receiver` | everything the board hears, for those integrations to decode              |
+| `switch`       | air conditioner extra                 | `switch.ar_escritorio_display`         | display, beep, self clean and filter, when the unit's protocol sends them |
+| `media_player` | TV or sound bar                       | `media_player.jbl_soundbar`            | power, volume, mute, sources, channel, play and pause, from learned keys  |
+| `fan`          | fan                                   | `fan.ventilador`                       | power, speeds, oscillation and modes, from learned keys                   |
+| `light`        | light                                 | `light.luminaria`                      | power, brightness and colour temperature in steps, effects                |
+| `cover`        | cover                                 | `cover.tela`                           | open, close, stop, and a position from the travel time                    |
+| `switch`       | on and off                            | `switch.tomada`                        | power, from one key that toggles or two                                   |
+| `button`       | sequence                              | `button.cinema`                        | keys of several appliances of the board, pressed in order                 |
 
 Every entity follows the board's `LWT`: while the board is offline, they are
 unavailable.
+
+The entity ids here are those of a Home Assistant set to English. Home Assistant
+builds entity ids from the names in its own language, so on one set to
+Portuguese the appliance's remote is `event.tv_quarto_controle` and its
+receiver `infrared.tv_quarto_receptor_infravermelho`. The board's receiver is
+`event.hubb_ir1_ir_receiver` in every language. An entity keeps the id it was
+created with, whatever the language is changed to later.
 
 ### What it looks like
 
@@ -50,10 +67,18 @@ Tasmota IR
     │   ├── button.jbl_soundbar_vol_down
     │   └── button.jbl_soundbar_optical
     ├── TV Quarto                         appliance, emitter 1
-    │   └── button.tv_quarto_power
+    │   ├── button.tv_quarto_power
+    │   ├── event.tv_quarto_remote        its own remote, key by key
+    │   ├── infrared.tv_quarto            for Home Assistant's LG Infrared
+    │   └── infrared.tv_quarto_infrared_receiver
     └── Ar Escritorio                     air conditioner, emitter 2, LG2 AKB74955603
-        └── climate.ar_escritorio
+        ├── climate.ar_escritorio
+        └── switch.ar_escritorio_display  the only extra an LG sends
 ```
+
+Every appliance carries the two `infrared` entities and, except an air
+conditioner, the `event` of its own remote; the tree only shows them under TV
+Quarto.
 
 ### Every function, and where it is
 
@@ -63,8 +88,14 @@ YAML.
 ```text
 Add Integration → Tasmota IR             pick the board; its emitters are counted
 └── Hubb IR1                             the board
+    ├── Configure
+    │   └── Move everything to another board
+    │                                    every appliance, an emitter each there
     ├── Add appliance                    name and emitter, then learn its keys
     ├── Add air conditioner              name and emitter, then press any key of its remote
+    ├── Add TV or sound bar, fan, light, cover, on and off
+    │                                    name and emitter, then each function: learn, reuse, clear
+    ├── Add sequence                     name, then steps: a key of an appliance and a wait
     ├── TV Quarto → Manage appliance
     │   ├── Learn a command              a new button per key
     │   ├── Delete a learned command     the button goes with it
@@ -72,22 +103,25 @@ Add Integration → Tasmota IR             pick the board; its emitters are coun
     │   ├── Rename
     │   ├── Move to another board        codes and entity ids go along
     │   └── Copy to another board        the other board gets its own copy
-    └── Ar Escritorio → Manage air conditioner
-        ├── Settings                     model, temperature range, modes, vanes
-        ├── Read the remote again        vendor and model, from one key press
-        ├── Change the emitter           tried before it is saved
-        ├── Rename
-        ├── Move to another board        settings and entity id go along
-        └── Copy to another board        the other board gets its own copy
+    ├── Ar Escritorio → Manage air conditioner
+    │   ├── Settings                     model, temperature range, modes, vanes, extras
+    │   ├── Read the remote again        vendor and model, from one key press
+    │   ├── Change the emitter           tried before it is saved
+    │   ├── Rename
+    │   ├── Move to another board        settings and entity id go along
+    │   └── Copy to another board        the other board gets its own copy
+    └── Cinema → Manage sequence
+        ├── Steps                        add, remove; ⚠ marks a step that is gone
+        └── Rename
 ```
 
-**Manage appliance** and **Manage air conditioner** are in the three-dot menu of
-each appliance, under its board. **Delete** is in the same menu, and takes the
-codes with it.
+**Manage appliance**, **Manage air conditioner** and **Manage sequence** are in
+the three-dot menu of each appliance or sequence, under its board. **Delete** is
+in the same menu, and takes the codes with it.
 
 ## Requirements
 
-- Home Assistant 2025.3 or newer.
+- Home Assistant 2025.3 or newer; 2026.6 or newer for the `infrared` entities.
 - An MQTT broker, with the Home Assistant MQTT integration set up.
 - A Tasmota board on that broker, with:
   - `IRsend` on at least one GPIO, and `IRrecv` to learn. `Gpio` in the
@@ -204,8 +238,10 @@ stored per appliance and the emitter is looked up when it is sent. The emitters
 are listed with the appliances already on them, and the one you pick is tried
 before it is saved, by sending the appliance's first learned command: nothing on
 the board says where an emitter points, and an appliance on the wrong one fails
-in silence. An appliance with nothing learned has nothing to send, so its
-emitter is saved straight away.
+in silence. An appliance with nothing learned gets the last command another
+integration sent through it (see
+[Home Assistant's own infrared integrations](#home-assistants-own-infrared-integrations));
+with nothing at all to send, its emitter is saved straight away.
 
 **Moving to another board does not require learning anything again either.** A
 learned code is the infrared signal itself, and every Tasmota board sends it the
@@ -215,6 +251,111 @@ only the emitter and the name are asked again, because the other board has its
 own. Copying gives the other board an appliance of its own, with new entities,
 for the same kind of TV in two rooms. Both need the other board added to Tasmota
 IR first.
+
+**Replacing a board** is **Configure → Move everything to another board** on
+the old one, checking the appliances on the new one, and then deleting the old
+board. One screen asks the emitter each appliance gets there, starting on the
+number it has today (on emitter 1 when the new board has fewer), and lists who
+already uses each; then every appliance moves as a single move would, codes,
+functions, settings and entity ids included, the `infrared` emitter too. The
+receiver entities, the `infrared` one and the appliance's `event`, only exist
+on a board with a receiver. A name the new board already has stops it before
+anything moves: rename one of the two first. So does an appliance the new board
+already has under another name, moved there before. The codes are written to
+the new board before the appliances leave the old one, so deleting the old
+board afterwards loses nothing. Moving the appliances one at a time works the
+same way. Copying works too, but a copy gets new entity ids, and whatever
+pointed at the old board's entities stops working when that board goes.
+
+## Appliance types
+
+A TV, a fan or a light is more than a row of buttons. The board has five more
+buttons for them, each giving the right entity:
+
+| Button                  | Entity         | Functions                                                                                                  |
+| ----------------------- | -------------- | ---------------------------------------------------------------------------------------------------------- |
+| **Add TV or sound bar** | `media_player` | power; volume up and down; mute; sources, each with a name; channel up and down; play and pause            |
+| **Add fan**             | `fan`          | power; a key per speed, or one key that cycles and how many speeds; oscillate; modes                       |
+| **Add light**           | `light`        | power; brighter and dimmer with how many steps; warmer and cooler with how many steps; effects and colours |
+| **Add cover**           | `cover`        | open and close; stop; how many seconds a full run takes                                                    |
+| **Add on and off**      | `switch`       | power                                                                                                      |
+
+Power is one key that toggles, or a pair of keys, one to turn on and one to turn
+off; a cover needs open and close. Everything else is optional, and the entity
+only offers what was learned.
+
+1. Pick the button, give a name and the emitter pointed at the appliance.
+2. Pick a function. **Learn it now** waits for the remote, as learning a key
+   does. **Use a key this board already learned** takes the code of any other
+   appliance of the board, so nothing is pressed again. **Clear it** forgets it.
+3. For a list (sources, speeds, modes, effects), name the item first, such as
+   `HDMI 1`, then learn or reuse its key.
+4. Optionally, the **Power sensor**: see below.
+5. **Finish**. **Manage** changes the functions later, the emitter (the test
+   presses power), the name, and moves or copies the appliance: its functions
+   live in the appliance itself, so they go along.
+
+**Turning an appliance you already have into a type:** add the type and reuse
+its keys one by one, check the new entity, then delete the old appliance. A
+sound bar learned as buttons becomes a media player without touching its remote.
+
+**The state is assumed.** Infrared says nothing back, so the entity keeps what
+Home Assistant sent, and follows the physical remote too: the receiver hears it,
+and a key that matches a learned function moves the state. Raw codes are never
+matched, since two captures of the same key are never identical.
+
+- **Power sensor.** Anything that turns on and off with the appliance, or a
+  power meter with the watts above which it counts as on. When it reads
+  something, it decides on and off, and a power key that toggles is only pressed
+  when the sensor says it has to be. A sensor takes a moment to see a change:
+  asking again right after a press can press it again. When the sensor goes
+  unavailable, its last reading stands.
+- **Steps are counted from the assumed level.** Brightness, colour and a cycling
+  speed key press the difference from where the integration thinks the
+  appliance is. If it drifts, take it to the lowest from the card and go up
+  again.
+- **A cover's position** needs both a stop key and the travel time: it moves for
+  the share of the run the distance takes, then presses stop.
+
+## Sequences
+
+A sequence is one button that presses keys of several appliances of the board in
+order: **Cinema** is the TV's power, the sound bar's power, a wait for the TV to
+wake up, and the sound bar's HDMI 1.
+
+1. **Add sequence** on the board, and a name: the button gets it, such as
+   `button.cinema`.
+2. **Add a step**: an appliance of this board and one of its keys (a learned
+   key, a function of a typed appliance, or an item of its lists), and how long
+   to wait after it before the next step. 0.4 s by default; a TV that was just
+   turned on can need several seconds before it takes a source.
+3. Add the rest, **Remove a step** if one is wrong, and **Finish**.
+
+**Manage sequence** edits the steps or renames it.
+
+- **A step names the key, never the code.** The code is looked up when the
+  button is pressed, so a key learned again is the one that goes, on whichever
+  emitter the appliance is on by then.
+- **A step on a typed appliance moves its state** exactly as the physical remote
+  would: pressing a toggling power key flips the assumed state, and pressing a
+  source sets it. The appliance's `event` does not fire, since its remote was
+  not pressed.
+- **Every step is checked before anything is sent.** A step whose appliance or
+  key is no longer on the board, or whose code the board could not take, stops
+  the whole sequence with an error naming the step and its key, and **Manage
+  sequence** shows a missing one with ⚠. An offline board sends nothing either.
+- **If the board goes offline half way**, the rest is not sent, and the error
+  says at which step it stopped. Editing, renaming or deleting the sequence
+  while it runs stops that run too. Pressing the button again while it runs
+  does nothing.
+- **A sequence's name is not an appliance's.** `remote.learn_command`,
+  `send_command` and `delete_command` with it as the `device` are refused, and
+  say which button runs it.
+- **An air conditioner is not a step**: its frames carry the whole state, and
+  its `climate` entity sends them. For anything with conditions, or across
+  boards, a Home Assistant script with these buttons and entities does it.
+- **A sequence moves with Move everything to another board**, and only that
+  way: its steps point at appliances of its own board.
 
 ## Air conditioners
 
@@ -246,7 +387,15 @@ vendor, mode, temperature, fan speed and vane position:
 - **It follows the physical remote.** Every frame of that vendor the receiver
   hears updates the card, so it stays right when somebody uses the remote in
   their hand.
-- **The state survives a restart** of Home Assistant.
+- **Extras:** turbo, economy, quiet and sleep as presets on the card, one at a
+  time as on the remotes; display, beep, self clean and filter as switches on
+  the unit's device. Only the ones the IR library really sends for the vendor
+  (an LG sends the display and nothing else), and only the ones ticked in
+  **Settings**. An extra the library toggles, such as a Samsung's beep, is left
+  out, since Tasmota keeps no memory of what it sent and every command would
+  flip it; so is a sleep that is really a timer to switch off. Changed while the unit is off, they go
+  out with the next turn on, and the physical remote moves them too.
+- **The state survives a restart** of Home Assistant, extras included.
 
 **Manage air conditioner → Settings** holds what the firmware is told:
 
@@ -255,6 +404,8 @@ vendor, mode, temperature, fan speed and vane position:
   never sends the vane; the same unit set to `AKB74955603` does. The known
   models of each vendor are offered, and any other can be typed.
 - **Temperature range and modes.** Only the modes your unit really has.
+- **Extras.** The ones this vendor's protocol sends, all ticked for a new unit;
+  untick what your unit does not have, and its preset or switch goes away.
 - **Vertical and horizontal vane.** The vertical vane is on by default, except
   for the vendors where the firmware treats it as a toggle (`COOLIX`,
   `TRANSCOLD`, `MIDEA`, `CORONA_AC`, `HITACHI_AC344`, `HITACHI_AC424`,
@@ -272,6 +423,41 @@ again once you have answered.
 
 **Rename**, **Move to another board** and **Copy to another board** work as they
 do for an appliance, carrying the settings along.
+
+## Home Assistant's own infrared integrations
+
+Home Assistant 2026.6 and newer ship integrations that already know every code
+of some devices: **LG Infrared** (TVs and air conditioners), **Samsung
+Infrared** (TVs), **Edifier Infrared** and **Marantz Infrared** (speakers and
+receivers), **Dyson Infrared** (fans) and **LED Infrared** (the generic strips
+and bulbs with a 13, 24, 40 or 44 key remote). Nothing is learned: they send
+through an `infrared` entity, and every appliance here has one.
+
+1. Add the device here as an appliance, on the emitter pointed at it. Nothing
+   has to be learned; an appliance you already have works too.
+2. **Settings → Devices & Services → Add Integration → LG Infrared**, or the
+   one for your device. As the transmitter, pick the appliance, such as
+   `infrared.tv_quarto`. As the receiver, pick
+   `infrared.tv_quarto_infrared_receiver`.
+3. That integration creates a device of its own, with a `media_player`, a
+   `climate`, a `fan` or a `light`, and the remote's keys as buttons.
+
+The emitter stays a property of the appliance. Changing it under **Manage
+appliance → Change the emitter**, or moving the appliance to another board,
+takes that integration along without touching it, because the entity ids do
+not change. With nothing learned, trying an emitter replays the last command
+that integration sent through the appliance.
+
+- **The receiver needs `SetOption58 1`.** Without raw data in the frames there
+  is nothing to hand over, and the log says so once.
+- **Emitters other than 1 need Tasmota after 15.6.0**, or the builds at
+  [self-labs.github.io/tasmota-kincony](https://self-labs.github.io/tasmota-kincony/):
+  those integrations send raw timings. An older firmware makes them fail with
+  an error, rather than sending through emitter 1.
+- **An offline board fails the command** with an error; nothing is queued.
+- **Deleting the appliance leaves that integration without a transmitter.**
+  Delete its entry too.
+- **An appliance on a board without `IRrecv` has no receiver entity.**
 
 ## Using the actions
 
@@ -391,6 +577,46 @@ mode: single
 
 `not_from: unavailable` keeps the board coming back online from firing it. For
 a remote you never learned, compare `data` instead of `known_as`.
+
+### Each appliance's own remote
+
+On a board with a receiver, every appliance also gets an `event` of its own,
+`event.tv_quarto_remote`, whose event types are the keys it learned: the
+buttons of an appliance, or the functions of a typed one (`power`, `mute`,
+each source by its name). It fires only for those keys, with the key's name as
+`event_type`, so the same automation needs no template, and the automation
+editor can build it with the event entity's own trigger, `event.received`:
+
+```yaml
+alias: TV power also switches the sound bar
+description: The TV remote's power key presses the sound bar's.
+triggers:
+  - trigger: event.received
+    target:
+      entity_id: event.tv_quarto_remote
+    options:
+      event_type: power
+actions:
+  - action: button.press
+    target:
+      entity_id: button.jbl_soundbar_power
+mode: single
+```
+
+`event.received` needs Home Assistant 2026.7 or newer (2026.4 to 2026.6 have it
+only as a Labs preview). Use it rather than a state trigger with a condition on
+`event_type`: moving the appliance to another board creates its event again
+with the last key it heard, and a state trigger takes that for a key press. On
+an older release, add `{{ trigger.from_state is not none }}` as a template
+condition to the state trigger.
+
+A key learned or deleted later joins or leaves the event types by itself. Raw
+codes are not event types: two captures of the same raw key are never
+identical, so there is nothing to compare. A key learned twice under two names
+fires both. In a typed appliance, a function keeps its name over an item of a
+list that has the same one: a source called `power` does not replace the power
+key. An air conditioner has no such event, since its `climate` entity already
+follows every frame of its remote.
 
 ## Where the codes live
 

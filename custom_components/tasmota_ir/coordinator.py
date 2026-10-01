@@ -10,7 +10,8 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Iterable, Iterator, Mapping
+from contextlib import contextmanager
 from dataclasses import dataclass
 from types import MappingProxyType
 from typing import Any
@@ -18,7 +19,8 @@ from uuid import uuid4
 
 from homeassistant.components import mqtt
 from homeassistant.config_entries import ConfigEntry, ConfigSubentry
-from homeassistant.core import HomeAssistant, callback
+from homeassistant.core import CALLBACK_TYPE, HomeAssistant, callback
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.dispatcher import async_dispatcher_send
 from homeassistant.helpers.storage import Store
 
@@ -29,6 +31,7 @@ from .const import (
     CONF_FULL_TOPIC,
     CONF_TOPIC,
     DEFAULT_CHANNEL,
+    DOMAIN,
     GPIO_IRRECV,
     GPIO_IRSEND_PREFIX,
     KEY_CHANNEL,
@@ -50,13 +53,48 @@ from .const import (
     STORAGE_VERSION,
     SUBENTRY_APPLIANCE,
     SUBENTRY_CLIMATE,
+    SUBENTRY_SEQUENCE,
 )
+from .device_types import TYPED_KINDS
+from .raw_timings import decode_compact
 
 _LOGGER = logging.getLogger(__name__)
+
+# Appliance keys on their way to a board, by entry id. See codes_arriving.
+DATA_ARRIVING = f"{DOMAIN}_arriving"
+
+
+@contextmanager
+def codes_arriving(
+    hass: HomeAssistant, entry_id: str, keys: Iterable[str]
+) -> Iterator[None]:
+    """Keep the codes of ``keys`` on a board while their subentries arrive.
+
+    Adding a subentry starts a reload of the board, and a reload drops the
+    codes of every key the board has no subentry for yet. Whether that reload
+    gets that far before the next subentry is added depends on whether
+    anything in it waits: in an install it waits on the disk first, and in the
+    tests it does not, where the first reload dropped the codes of every
+    appliance after it. This makes the order not matter.
+    """
+    arriving: dict[str, set[str]] = hass.data.setdefault(DATA_ARRIVING, {})
+    arriving[entry_id] = set(keys)
+    try:
+        yield
+    finally:
+        arriving.pop(entry_id, None)
 
 
 class CodeTooLargeError(Exception):
     """A captured code does not fit in the board's MQTT buffer."""
+
+
+class RawChannelError(HomeAssistantError):
+    """The board cannot, or did not confirm it would, send raw data on that emitter."""
+
+
+class RawUnconfirmedError(RawChannelError):
+    """The board did not answer, so whether the raw code left is unknown."""
 
 
 @dataclass(frozen=True, slots=True)
@@ -106,6 +144,18 @@ class TasmotaIrCoordinator:
         # forgotten whenever the board comes back online, since that is when
         # its firmware may have changed.
         self._raw_json: bool | None = None
+        # The last command another integration sent through each appliance's
+        # infrared entity, as (compact raw, frequency), so trying an emitter
+        # has something to replay when nothing was learned. Memory only: a
+        # restart forgets it, and the emitter is then saved without a test.
+        self.last_infrared: dict[str, tuple[str, int]] = {}
+        # The infrared receivers of this board's appliances. Each frame's
+        # RawData is decoded once, here, and handed to all of them.
+        self._timings_listeners: list[Callable[[list[int]], None]] = []
+        self._warned_no_raw = False
+        # The climate entity of each air conditioner, by appliance key, so its
+        # switches can read and change the extras it sends.
+        self.climates: dict[str, Any] = {}
 
     # ------------------------------------------------------------------
     # Topics
@@ -201,6 +251,8 @@ class TasmotaIrCoordinator:
         if not isinstance(received, dict):
             return
 
+        self._relay_timings(received)
+
         # A partial capture is worse than no capture: it looks like a valid code
         # and reproduces nothing. Long frames, air conditioners above all, decode
         # this way whenever two presses arrive back to back.
@@ -244,6 +296,47 @@ class TasmotaIrCoordinator:
             if entry in self._ir_waiters:
                 self._ir_waiters.remove(entry)
 
+    @callback
+    def async_add_timings_listener(
+        self, listener: Callable[[list[int]], None]
+    ) -> CALLBACK_TYPE:
+        """Hand every frame the receiver hears, as signed timings, to ``listener``."""
+        self._timings_listeners.append(listener)
+
+        @callback
+        def _remove() -> None:
+            if listener in self._timings_listeners:
+                self._timings_listeners.remove(listener)
+
+        return _remove
+
+    @callback
+    def _relay_timings(self, received: dict[str, Any]) -> None:
+        """Decode a frame's RawData once, for every infrared receiver of the board.
+
+        This runs before the usefulness check on purpose. That check is about
+        what this integration can store and replay; the integrations listening
+        here have decoders of their own and decide for themselves.
+        """
+        if not self._timings_listeners:
+            return
+        raw = received.get(KEY_RAW_DATA)
+        if not isinstance(raw, str) or not raw:
+            if not self._warned_no_raw:
+                self._warned_no_raw = True
+                _LOGGER.warning(
+                    "%s reports received frames without RawData, so the "
+                    "integrations listening to its infrared receivers get "
+                    "nothing. Send SetOption58 1 to the board",
+                    self.entry.title,
+                )
+            return
+        timings = decode_compact(raw)
+        if not timings:
+            return
+        for listener in list(self._timings_listeners):
+            listener(timings)
+
     # ------------------------------------------------------------------
     # Outgoing MQTT
     # ------------------------------------------------------------------
@@ -284,28 +377,47 @@ class TasmotaIrCoordinator:
     async def _async_send_raw_code(
         self, code: dict[str, Any], channel: int | None
     ) -> None:
-        """Send a raw capture, on its own emitter when the firmware can.
+        """Send a stored raw capture, falling back to emitter 1 as it always did."""
+        raw = code.get(KEY_RAW_DATA)
+        if not raw:
+            raise CodeTooLargeError("the stored raw code is empty")
+        frequency = code.get(KEY_FREQUENCY, RAW_FREQUENCY)
+        await self.async_send_compact(raw, frequency, channel, fallback=True)
+
+    async def async_send_compact(
+        self, raw: str, frequency: int, channel: int | None, *, fallback: bool
+    ) -> None:
+        """Send raw data in Tasmota's compact form, on its own emitter when possible.
 
         Emitter 1 always gets the plain ``IRSend <freq>,<data>`` form, which
         every firmware takes and which leaves through the first emitter anyway.
         Any other emitter needs the JSON form Tasmota takes natively since
         arendst/Tasmota#25062, in every release after 15.6.0. A firmware
-        without it answers ``Wrong Protocol`` and sends nothing, so
-        the first raw code of a board waits for that answer: ``Done`` settles
-        it, anything else falls back to the plain form on emitter 1, where a
-        remote at least has a chance, and says so in the log.
-        """
-        raw = code.get(KEY_RAW_DATA)
-        if not raw:
-            raise CodeTooLargeError("the stored raw code is empty")
-        frequency = code.get(KEY_FREQUENCY, RAW_FREQUENCY)
+        without it answers ``Wrong Protocol`` and sends nothing, so the first
+        raw code of a board waits for that answer, and ``Done`` settles it.
 
-        if channel not in (None, 1) and self._raw_json is not False:
+        ``fallback`` says what happens when the emitter cannot be chosen. A
+        code learned here falls back to the plain form on emitter 1, where a
+        remote at least has a chance, and says so in the log. A command from
+        another integration gets a RawChannelError instead: it asked for this
+        appliance's emitter, and a LED aimed somewhere else fails in silence.
+        """
+        if channel in (None, 1):
+            await self._async_send_plain_raw(raw, frequency)
+            return
+
+        if self._raw_json is not False:
             encoded = json.dumps(
                 {KEY_RAW_DATA: raw, KEY_FREQUENCY: frequency, KEY_CHANNEL: channel},
                 separators=(",", ":"),
             )
             if len(encoded) > MAX_CODE_BYTES:
+                if not fallback:
+                    raise CodeTooLargeError(
+                        f"the raw code is {len(encoded)} bytes with its emitter, "
+                        f"above the {MAX_CODE_BYTES} the board accepts in one "
+                        "message"
+                    )
                 _LOGGER.warning(
                     "Sending a raw code on emitter 1 instead of %s: with the "
                     "emitter it is %s bytes, above the %s the board accepts",
@@ -331,11 +443,18 @@ class TasmotaIrCoordinator:
                         "%s; it may or may not have gone out",
                         channel,
                     )
+                    if not fallback:
+                        raise RawUnconfirmedError(
+                            f"{self.entry.title} did not confirm the raw code on "
+                            f"emitter {channel}; it may or may not have gone out"
+                        )
                     return
                 if irsend_reply_text(reply) == "Done":
                     self._raw_json = True
                     return
                 self._raw_json = False
+                if not fallback:
+                    raise RawChannelError(self._raw_channel_message(channel))
                 _LOGGER.warning(
                     "This firmware cannot choose the emitter of a raw code (it "
                     "answered %r), so raw codes leave through emitter 1 until "
@@ -343,13 +462,19 @@ class TasmotaIrCoordinator:
                     "can (arendst/Tasmota#25062)",
                     irsend_reply_text(reply),
                 )
-        elif channel not in (None, 1):
+        elif not fallback:
+            raise RawChannelError(self._raw_channel_message(channel))
+        else:
             _LOGGER.warning(
                 "Sending a raw code on emitter 1 instead of %s: this firmware "
                 "cannot choose the emitter of a raw code",
                 channel,
             )
 
+        await self._async_send_plain_raw(raw, frequency)
+
+    async def _async_send_plain_raw(self, raw: str, frequency: int) -> None:
+        """``IRSend <freq>,<data>``: every firmware, always the first emitter."""
         payload = f"{frequency},{raw}"
         if len(payload) > MAX_CODE_BYTES:
             raise CodeTooLargeError(
@@ -357,6 +482,15 @@ class TasmotaIrCoordinator:
                 f"{MAX_CODE_BYTES} the board accepts in one message"
             )
         await self.async_send_raw(CMND_IRSEND, payload)
+
+    def _raw_channel_message(self, channel: int) -> str:
+        """Why a command for another integration could not go out."""
+        return (
+            f"{self.entry.title} cannot send a raw code through emitter "
+            f"{channel} with its firmware. Every Tasmota release after 15.6.0 "
+            "can (arendst/Tasmota#25062), and so do the builds at "
+            "self-labs.github.io/tasmota-kincony"
+        )
 
     async def async_probe_channels(self) -> tuple[int, bool]:
         """Ask the board how many emitters it has and whether it can receive.
@@ -415,7 +549,11 @@ class TasmotaIrCoordinator:
         """The appliances of this board, keyed by their stable key."""
         result: dict[str, Appliance] = {}
         for subentry in self.entry.subentries.values():
-            if subentry.subentry_type not in (SUBENTRY_APPLIANCE, SUBENTRY_CLIMATE):
+            if subentry.subentry_type not in (
+                SUBENTRY_APPLIANCE,
+                SUBENTRY_CLIMATE,
+                *TYPED_KINDS,
+            ):
                 continue
             if not subentry.unique_id:
                 continue
@@ -428,6 +566,30 @@ class TasmotaIrCoordinator:
                 data=subentry.data,
             )
         return result
+
+    @property
+    def sequences(self) -> dict[str, Appliance]:
+        """The sequences of this board: steps over its appliances, no emitter."""
+        return {
+            subentry.unique_id: Appliance(
+                key=subentry.unique_id,
+                subentry_id=subentry.subentry_id,
+                name=subentry.title,
+                kind=SUBENTRY_SEQUENCE,
+                channel=0,
+                data=subentry.data,
+            )
+            for subentry in self.entry.subentries.values()
+            if subentry.subentry_type == SUBENTRY_SEQUENCE and subentry.unique_id
+        }
+
+    def find_sequence(self, name: str | None) -> Appliance | None:
+        """The sequence a person means by this name, ignoring case."""
+        wanted = (name or "").strip().casefold()
+        for sequence in self.sequences.values():
+            if wanted and sequence.name.strip().casefold() == wanted:
+                return sequence
+        return None
 
     def find_appliance(self, name: str | None) -> Appliance | None:
         """The appliance a person means by this name, ignoring case."""
@@ -530,7 +692,8 @@ class TasmotaIrCoordinator:
         nobody can reach, so they go at the next setup.
         """
         known = self.appliances
-        stale = [key for key in self._codes if key not in known]
+        arriving = self.hass.data.get(DATA_ARRIVING, {}).get(self.entry.entry_id, ())
+        stale = [key for key in self._codes if key not in known and key not in arriving]
         for key in stale:
             del self._codes[key]
         if stale:
