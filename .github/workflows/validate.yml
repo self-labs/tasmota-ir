@@ -4,6 +4,9 @@ on:
   push:
     branches: [master]
   pull_request:
+  # Weekly, so a new HACS or hassfest rule shows up even when nothing is pushed.
+  schedule:
+    - cron: "0 4 * * 1"
   workflow_dispatch:
 
 jobs:
