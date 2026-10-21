@@ -9,6 +9,17 @@ about compatibility, only when it was published.
 
 ## [Unreleased]
 
+## [2026.10.2] - 2026-10-21
+
+### Changed
+
+- **Tasmota IR is in the HACS default catalogue** ([hacs/default#11235](https://github.com/hacs/default/pull/11235)). The README badge says Default, and installing by hand is a search in HACS instead of adding a custom repository. An install that came in as a custom repository needs nothing: HACS treats it as a default one on its next refresh.
+- **The validation runs every Monday**, not only on a push, so a new HACS or hassfest rule shows up even in a week with no commits.
+
+### Fixed
+
+- **The first README badge showed as a broken image inside HACS.** HACS rewrites a relative link by prefixing the first `(` of the line, and the badge line ended in `./LICENSE`, so the prefix landed on the first badge's image. The licence badge now links with an absolute URL.
+
 ## [2026.10.1] - 2026-10-01
 
 ### Added
@@ -169,7 +180,8 @@ about compatibility, only when it was published.
 - **Partial captures are discarded at capture time.** A truncated frame arrives with `Data` of `"0x"` and `Bits` of `0`, and storing one produces a command that is accepted, listed and reproduces nothing.
 - **Entities attach to the board's existing device.** The device info declares `connections={(CONNECTION_NETWORK_MAC, mac)}`, which is what the Tasmota integration uses, so the IR entities sit next to the board's diagnostics instead of forming a second device for the same hardware.
 
-[Unreleased]: https://github.com/self-labs/tasmota-ir/compare/v2026.10.1...HEAD
+[Unreleased]: https://github.com/self-labs/tasmota-ir/compare/v2026.10.2...HEAD
+[2026.10.2]: https://github.com/self-labs/tasmota-ir/compare/v2026.10.1...v2026.10.2
 [2026.10.1]: https://github.com/self-labs/tasmota-ir/compare/v2026.9.11...v2026.10.1
 [2026.9.11]: https://github.com/self-labs/tasmota-ir/compare/v2026.9.10...v2026.9.11
 [2026.9.10]: https://github.com/self-labs/tasmota-ir/compare/v2026.9.9...v2026.9.10
