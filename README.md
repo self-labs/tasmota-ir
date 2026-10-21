@@ -1,4 +1,7 @@
-[![HACS Custom](https://img.shields.io/badge/HACS-Custom-41BDF5?logo=home-assistant&logoColor=white)](https://hacs.xyz/) [![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2025.3%2B-41BDF5?logo=home-assistant&logoColor=white)](https://www.home-assistant.io/) [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](./LICENSE)
+[![HACS Default](https://img.shields.io/badge/HACS-Default-41BDF5?logo=home-assistant&logoColor=white)](https://hacs.xyz/) [![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2025.3%2B-41BDF5?logo=home-assistant&logoColor=white)](https://www.home-assistant.io/) [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](https://github.com/self-labs/tasmota-ir/blob/master/LICENSE)
+
+<!-- Every link on the line above stays absolute. HACS rewrites a relative link by
+prefixing the first "(" of the whole line, which was the first badge's image. -->
 
 # 📡 Tasmota IR
 
@@ -152,10 +155,13 @@ under **Settings → System → Network → Home Assistant URL**.
 <details>
 <summary>Doing it by hand</summary>
 
-1. HACS → three-dot menu → **Custom repositories**.
-2. URL: `https://github.com/self-labs/tasmota-ir`, type **Integration** → **ADD**.
-3. Open the entry and click **Download**.
-4. Restart Home Assistant.
+1. Open HACS and search for **Tasmota IR**. It is in the default catalogue, so
+   there is no custom repository to add.
+2. Open the entry and click **Download**.
+3. Restart Home Assistant.
+
+If you added it as a custom repository before it reached the catalogue, there is
+nothing to do: HACS treats it as a default repository on its next refresh.
 
 </details>
 
@@ -668,7 +674,8 @@ appliance name: `Hubb IR1 TV Quarto power` becomes `TV Quarto power`.
   air conditioners of such a vendor on the same board can confuse each other.
 - **The icon in the HACS catalogue** keeps a placeholder. The device and
   integration pages show the right one; the catalogue listing is
-  [hacs/integration#5171](https://github.com/hacs/integration/issues/5171).
+  [hacs/integration#5171](https://github.com/hacs/integration/issues/5171),
+  fixed in the Marketplace that replaces HACS in Home Assistant 2026.11.
 
 ## Tested with
 
