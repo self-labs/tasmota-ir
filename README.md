@@ -1,4 +1,4 @@
-[![HACS Default](https://img.shields.io/badge/HACS-Default-41BDF5?logo=home-assistant&logoColor=white)](https://hacs.xyz/) [![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2025.3%2B-41BDF5?logo=home-assistant&logoColor=white)](https://www.home-assistant.io/) [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](https://github.com/self-labs/tasmota-ir/blob/master/LICENSE)
+[![HACS Default](https://img.shields.io/badge/HACS-Default-41BDF5?logo=home-assistant&logoColor=white)](https://hacs.xyz/) [![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2025.3%2B-41BDF5?logo=home-assistant&logoColor=white)](https://www.home-assistant.io/) [![Release](https://img.shields.io/github/v/release/self-labs/tasmota-ir?color=293a44)](https://github.com/self-labs/tasmota-ir/releases) [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](https://github.com/self-labs/tasmota-ir/blob/master/LICENSE)
 
 <!-- Every link on the line above stays absolute. HACS rewrites a relative link by
 prefixing the first "(" of the whole line, which was the first badge's image. -->

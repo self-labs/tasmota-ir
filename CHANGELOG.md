@@ -9,6 +9,12 @@ about compatibility, only when it was published.
 
 ## [Unreleased]
 
+## [2026.10.3] - 2026-10-21
+
+### Added
+
+- **A Release badge** at the top of the README with the current version, as on the other Self-Labs projects.
+
 ## [2026.10.2] - 2026-10-21
 
 ### Changed
@@ -180,7 +186,8 @@ about compatibility, only when it was published.
 - **Partial captures are discarded at capture time.** A truncated frame arrives with `Data` of `"0x"` and `Bits` of `0`, and storing one produces a command that is accepted, listed and reproduces nothing.
 - **Entities attach to the board's existing device.** The device info declares `connections={(CONNECTION_NETWORK_MAC, mac)}`, which is what the Tasmota integration uses, so the IR entities sit next to the board's diagnostics instead of forming a second device for the same hardware.
 
-[Unreleased]: https://github.com/self-labs/tasmota-ir/compare/v2026.10.2...HEAD
+[Unreleased]: https://github.com/self-labs/tasmota-ir/compare/v2026.10.3...HEAD
+[2026.10.3]: https://github.com/self-labs/tasmota-ir/compare/v2026.10.2...v2026.10.3
 [2026.10.2]: https://github.com/self-labs/tasmota-ir/compare/v2026.10.1...v2026.10.2
 [2026.10.1]: https://github.com/self-labs/tasmota-ir/compare/v2026.9.11...v2026.10.1
 [2026.9.11]: https://github.com/self-labs/tasmota-ir/compare/v2026.9.10...v2026.9.11
