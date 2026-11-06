@@ -11,24 +11,24 @@ about compatibility, only when it was published.
 
 ## [2026.10.3] - 2026-10-21
 
-### Added
+### ✨ Added
 
 - **A Release badge** at the top of the README with the current version, as on the other Self-Labs projects.
 
 ## [2026.10.2] - 2026-10-21
 
-### Changed
+### 🔧 Changed
 
 - **Tasmota IR is in the HACS default catalogue** ([hacs/default#11235](https://github.com/hacs/default/pull/11235)). The README badge says Default, and installing by hand is a search in HACS instead of adding a custom repository. An install that came in as a custom repository needs nothing: HACS treats it as a default one on its next refresh.
 - **The validation runs every Monday**, not only on a push, so a new HACS or hassfest rule shows up even in a week with no commits.
 
-### Fixed
+### 🐛 Fixed
 
 - **The first README badge showed as a broken image inside HACS.** HACS rewrites a relative link by prefixing the first `(` of the line, and the badge line ended in `./LICENSE`, so the prefix landed on the first badge's image. The licence badge now links with an absolute URL.
 
 ## [2026.10.1] - 2026-10-01
 
-### Added
+### ✨ Added
 
 - **Sequences.** **Add sequence** on a board makes one button, such as `button.cinema`, that presses keys of several of the board's appliances in order, with a wait of its own after each step but the last (0.4 s by default; a TV just turned on needs a few seconds before it takes a source). A step is an appliance and one of its keys, a learned key, a typed appliance's function or an item of its lists; the code is looked up at the press, so a key learned again is the one sent, on the appliance's current emitter. A step on a typed appliance moves its assumed state as the physical remote would. Every step is checked before anything goes out: a step whose appliance or key is gone, or whose code the board could not take, stops it with an error naming the step and its key, and a missing one shows with ⚠ in **Manage sequence**, which also removes steps and renames. An offline board sends nothing; a board that goes offline half way stops the rest, and the error says at which step; editing or deleting the sequence while it runs stops that run; a press while it runs is ignored. A list item shows its list (`JBL Soundbar: Sources: HDMI 1`). The remote's actions refuse a sequence's name as a `device`, instead of making an appliance called the same. An air conditioner is never a step, and a sequence only moves with **Move everything to another board**, whose result now counts what moved rather than calling it appliances. 22 tests.
 - **Move everything to another board.** The board's **Configure** moves every appliance it has to another board at once: one screen asks the emitter each gets there, starting on the number it has today (emitter 1 when the other board has fewer) and naming who already uses each, and then each appliance moves as a single move does, with its codes, functions, settings and entity ids. Nothing moves when the other board already has one of the names, or the same appliance under another name (the single move refuses that too, instead of merging the codes into it and failing half way), or when an appliance came, went or was renamed while the screen was open; a board that is not running says so. Replacing a board is this and then deleting the old one. The single move shares the same code, and the codes arriving on a board are kept through the reloads each new appliance starts there, whichever order those run in. 11 tests.
@@ -37,65 +37,65 @@ about compatibility, only when it was published.
 - **Air conditioner extras.** Turbo, economy, quiet and sleep become presets on the climate card, and display, beep, self clean and filter become switches on the unit's device, each sent inside the IRHVAC frame with the rest of the state. Which ones a unit gets comes from a table read out of IRremoteESP8266 2.8.6 (`IRac::sendAc`, 49 vendors with at least one): the library silently drops what a protocol has no bit for, so offering it would give a switch that does nothing. An LG sends only the display. An extra the library toggles against the previous frame (`IRac::handleToggles`: a Samsung's beep and self clean, Coolix and Midea turbo, and more) is never offered, since Tasmota only remembers the frames it heard, never those it sent, and every command would flip it; neither is a sleep that is really a switch-off timer (Daikin2, Fujitsu, Samsung). Beep starts off, as it was while it was not sent at all. **Settings** gains an Extras field to untick what the unit lacks, which also removes its switch. Changes made while the unit is off wait for the next turn on, the physical remote moves the preset and the switches, an LG's own display key flips the display switch, and everything comes back after a restart. Units added before this get their vendor's extras by themselves. 15 tests.
 - **Home Assistant's own infrared integrations send through these boards.** Every appliance gets an `infrared` emitter, and on a board with `IRrecv` an `infrared` receiver, so LG Infrared, Samsung Infrared, Edifier Infrared, Marantz Infrared, Dyson Infrared and LED Infrared work with their built-in codes and nothing learned. The emitter and the board stay a property of the appliance: changing the emitter, or moving the appliance to another board and deleting the old one, takes the integration along with the same entity ids. Commands go out in Tasmota's own compact raw format (`raw_timings.py`, the rule of `IRRawTable`), emitter 1 in the plain form and the others as JSON with `Channel`; a firmware that cannot choose the emitter gets an error, never emitter 1, and so does an offline board. Each received frame's `RawData` is decoded once for all of the board's receivers, and a board without `SetOption58` says so once in the log. Trying an emitter on an appliance with nothing learned replays the last command another integration sent through it. Trying an emitter tells a board that did not answer, or is offline, apart from a firmware that cannot choose the emitter. The receiver has a name of its own, so its entity id is the same on every release from 2026.6. Home Assistant 2026.6 or newer; older releases get no infrared entities and nothing else changes. 35 tests.
 
-### Changed
+### 🔧 Changed
 
 - **The README covers every function.** The tree on it had stopped at the entities of 2026.9.5; it now shows a board as Home Assistant lists it and, beside it, every menu and where it is, move and copy included. New sections: a quick start from nothing to a working button, every field of the three remote actions with its default (`num_repeats` 1, `delay_secs` 0.4, `timeout` 20), what `remote.turn_off` pauses and what it does not, the attributes of each entity, the event payload with a complete automation, what the climate entity offers, and where the codes are kept.
 - **Raw codes on any emitter are native Tasmota now.** [arendst/Tasmota#25062](https://github.com/arendst/Tasmota/pull/25062) was merged on 27 September 2026, and the maintainer's follow-up [#25077](https://github.com/arendst/Tasmota/pull/25077) went in on top: `RawData` is only used when no known `Protocol` is given, it has to be a JSON string, and a `Frequency` of 0 or above 65535 means 38 kHz. The integration already sends exactly that shape (no `Protocol`, the capture's own string, 38000), so what goes to the board does not change. The README, the comment in `const.py` and the log line for an older firmware now say every release after 15.6.0 has it, instead of pointing at an open PR.
 
-### Fixed
+### 🐛 Fixed
 
 - **The README said an air conditioner's modes come from its remote.** Only the vendor and the model do; every mode is offered until **Settings** says which ones the unit has.
 - **The README did not say the emitters are counted once.** A board added while offline gets one emitter and no receiver, and a template changed later is only seen by adding the board again. It is now a warning on the step that adds the board, and a known limit.
 
 ## [2026.9.11] - 2026-09-25
 
-### Added
+### ✨ Added
 
 - **Move an appliance to another board, or copy it there.** **Manage appliance** gains **Move to another board** and **Copy to another board**, for appliances and air conditioners alike. The board is picked from the other ones that are up, skipped when there is only one, and the emitter and the name are asked there, since the other board has its own emitters and its own names. Nothing is learned again: a code is the infrared signal itself. A move keeps the appliance key, so its buttons and climate entity come back with the same unique ids, and Home Assistant restores their entity ids, names and areas from the ones the old board removed: dashboards and automations keep working. A copy gets a key and entities of its own. The codes are written to the other board before its subentry is added, because adding it reloads that board and a reload drops codes nobody owns. Six tests: a move with a renamed button, a copy, a name already taken there, no other board, an air conditioner, and the board chosen among several.
 
 ## [2026.9.10] - 2026-09-25
 
-### Changed
+### 🔧 Changed
 
 - **Raw codes leave through their appliance's emitter when the firmware allows it.** A remote whose protocol the firmware does not know is stored as raw, and the plain `IRSend <freq>,<data>` form takes no channel, so until now every raw code left through emitter 1 whatever the appliance said. [arendst/Tasmota#25062](https://github.com/arendst/Tasmota/pull/25062) adds `IRSend {"RawData":...,"Frequency":...,"Channel":...}`, and the integration now sends that for any emitter other than 1. The first time, it waits for the board's answer: `Done` is kept and later codes go without waiting; `Wrong Protocol`, what a firmware without the PR says while sending nothing, makes it fall back to the plain form on emitter 1 from then on, with a warning in the log. The answer is forgotten whenever the board comes back online, since that is when its firmware may have changed. Emitter 1 keeps the plain form, which every firmware takes. With no answer at all, nothing is sent again, since the key may already have gone out.
 
 ## [2026.9.9] - 2026-09-23
 
-### Added
+### ✨ Added
 
 - **The emitter is tried before it is saved.** Choosing one under **Change the emitter** sends something through it right away, the first learned command for an appliance and turn on for an air conditioner, and then asks whether it answered. Nothing on the board says where an emitter points, and an appliance on the wrong one fails in complete silence: the command is accepted, the board reports `Done`, and the signal leaves through a LED aimed somewhere else.
 
-### Changed
+### 🔧 Changed
 
 - **The emitter is picked from a list that names who uses it**, `3: TV Quarto` rather than a bare `3`, instead of a number box. An appliance added and given the default emitter 1, while its LED is on another one, was exactly the trap.
 - **The menu of an appliance says which emitter it is on**, and the one of an air conditioner says vendor, model and emitter.
 
 ## [2026.9.8] - 2026-09-22
 
-### Added
+### ✨ Added
 
 - A test built from a capture taken on the bench: two frames the library could not finish reading, then the real LG frame.
 
-### Changed
+### 🔧 Changed
 
 - **The failure screen of the air conditioner says what is ignored** while it waits: anything that is not an air conditioner frame, broken frames included.
 
-### Fixed
+### 🐛 Fixed
 
 - **Reading an air conditioner remote ended on whatever the receiver heard first.** Pressing the remote of an LG produced bursts of frames decoded as `UNKNOWN`, and only then the real `LG2` ones. The wait took the first usable frame, which was one of those, and the flow reported that it had heard no air conditioner. It now waits for an air conditioner frame, or for the window to close.
 
 ## [2026.9.7] - 2026-09-22
 
-### Added
+### ✨ Added
 
 - **Tests for the strings, rendered the way the frontend renders them**: no quoted placeholder anywhere, no placeholder in the title of a waiting screen, English identical to `strings.json`, and Portuguese with every key. Both bugs fixed below would have failed them. Also tests for the LG vane and off frames, captured from a real remote. 29 tests in all.
 
-### Changed
+### 🔧 Changed
 
 - **Shorter waiting screens.** The frontend centres the text of a waiting screen, so the explanation moved to the step before it, and the screen itself only says what to press and how long it waits.
 - **The model hint in the air conditioner settings** says that **Read the remote again**, pressing the vane key, sets the LG model that sends the vane by itself.
 
-### Fixed
+### 🐛 Fixed
 
 - **Adding an air conditioner showed a translation error as the title**, `[formatjs Error: MISSING_VALUE] The intl string context variable "name" was not provided`. The frontend renders the title of a waiting screen with no placeholders at all, and the title had `{name}`. Waiting screen titles no longer carry placeholders.
 - **An LG vane key on the physical remote threw the card to Auto at 15 degrees.** LG sends the vane, the horizontal vane and the display toggle as frames of their own, and the firmware still decodes them into a full `IRHVAC`, with `Mode Auto` and `Temp 15` filled in as defaults. Those frames now move only the vane, and the display toggle is ignored. The other way round too: an LG main frame never carries the vane, so its `SwingV` default no longer resets the vane on the card.
@@ -103,7 +103,7 @@ about compatibility, only when it was published.
 
 ## [2026.9.6] - 2026-09-22
 
-### Added
+### ✨ Added
 
 - **Every appliance is listed under its board, with its own device.** Appliances are now config subentries: the board shows **Add appliance** and **Add air conditioner**, and each appliance appears underneath with its commands as buttons on its own device, linked to the board. An appliance with nothing learned yet shows up too.
 - **Learning from the interface.** Open an appliance, choose **Manage appliance → Learn a command**, name the key and press it. The appliance is the one you opened, so the emitter is never in question, and the result says whether it worked, with **Try again**, **Learn a different command** and **Stop here** when it did not. Adding an appliance offers to learn its first key right away.
@@ -112,7 +112,7 @@ about compatibility, only when it was published.
 - **Rename an appliance**, keeping its buttons, codes and emitter. Codes and entities hang off a key that never changes, so a rename is only a new title.
 - **Tests**, run against Home Assistant itself: adding an appliance and learning, learning from the menu and moving the emitter, a timeout, a duplicate name, learning through the action under a new name, the air conditioner flow, the vane payload, following the physical remote, the settings, the migration from 2026.9.5 and the clean-up after an appliance is deleted. A workflow runs them on every push, next to hassfest and the HACS validation.
 
-### Changed
+### 🔧 Changed
 
 - **Home Assistant 2025.3 or newer is required**, for config subentries.
 - **The Configure menu is gone.** Everything it did now lives on the appliance itself. An existing install is migrated on the first start: each appliance becomes a subentry with the same emitter, the learned codes move with it, and **entity ids stay the same**, so no dashboard or automation notices. Friendly names lose the board prefix, because the device already carries the appliance name: `Hubb IR1 TV Quarto power` becomes `TV Quarto power`.
@@ -121,7 +121,7 @@ about compatibility, only when it was published.
 - **Waiting for the remote is a progress screen.** It starts waiting the moment it opens, so the key is pressed with nothing to click in between, and it waits 30 seconds instead of 20.
 - **Commands to an air conditioner carry `Light`**, as the remote reported it, so an LG model that sends a separate display toggle whenever `Light` is off keeps its display as it was. Vendors where `Light` is itself a toggle do not get the key.
 
-### Fixed
+### 🐛 Fixed
 
 - **The air conditioner screen showed `{name}` instead of the name.** The translation wrapped the placeholder in apostrophes, and the frontend formats strings as ICU messages, where an apostrophe before a brace escapes it. No placeholder is quoted any more.
 - **The same screen said to press a key with the window open**, while the wait only started after **Submit**. Anyone who followed it pressed too early and got an error.
@@ -129,48 +129,48 @@ about compatibility, only when it was published.
 
 ## [2026.9.5] - 2026-09-21
 
-### Added
+### ✨ Added
 
 - **Delete a learned command from the interface**, under **Configure → Delete a learned command**. `remote.delete_command` already did this, but a service call is not where anyone looks for "delete the button I learned wrong". The command is picked from a list of everything the board knows, and its button disappears with it.
 
-### Changed
+### 🔧 Changed
 
 - **The README is now the full reference** for what the integration does: where to run the actions, the three kinds of capture refused on purpose, how emitters are assigned, the known limits, and the fact that moving an appliance to another emitter needs no relearning because the emitter is looked up at send time.
 
 
 ## [2026.9.4] - 2026-09-21
 
-### Fixed
+### 🐛 Fixed
 
 - **A held key could be learned as nothing.** While a key is held, a NEC remote sends the real frame once and then a short burst every 108 ms that only means "keep repeating the last one": zero bits, a run of F's in `Data` and a three pulse `RawData`. That burst carries no command, but it passed the capture filter on the strength of its `RawData`, so a learn window that opened after the real frame would store it as raw and create a button that does nothing. Repeat frames are now discarded. Measured on an LG television: one 32 bit frame followed by eighteen of these in 2.4 seconds.
 
 
 ## [2026.9.3] - 2026-09-21
 
-### Changed
+### 🔧 Changed
 
 - **Learning refuses an air conditioner frame** and points at the air conditioner flow instead. One capture from one of those remotes is one temperature in one mode, and replaying it is nothing like having the remote in hand. The frame it refuses is the same one the climate flow reads the vendor and the model out of.
 - **Raw codes warn when the appliance is not on emitter 1.** The firmware's raw send form takes no channel at all, so it always leaves through the first emitter. That is the firmware's limit rather than a choice here, and it is now said out loud in the log instead of failing quietly.
 
-### Fixed
+### 🐛 Fixed
 
 - **A learned raw code could never be sent.** `CmndIrSend` in the firmware routes on whether the payload contains a brace, so anything with one goes to the JSON parser, and that parser has no protocol called `RAW`. Every capture that did not decode was therefore stored in a shape the board answers with `{"IRSend":"No Bits or Data"}`. Raw now goes as the plain `IRSend <freq>,<data>` form the firmware actually accepts, with 38 kHz recorded alongside the capture.
 - **The remote's attributes went stale.** The list of appliances and commands was built when the entity was created and never rewritten, so a remote that had just learned a command still reported none. It now follows the store, the same way the buttons already did.
 
 ## [2026.9.2] - 2026-09-21
 
-### Added
+### ✨ Added
 
 - **Brand artwork**, so the integration stops showing "icon not available" on its device and integration pages. It is the project's own icon from `home-assistant/brands` with the universal IR symbol added in the bottom right corner, and the badge is drawn in the colour read out of each source file, so the light variant stays black and the dark one stays Tasmota blue. Anyone installing it sees the icon they already know, with infrared on it.
 
-### Fixed
+### 🐛 Fixed
 
 - **Every entity showed as unavailable.** The last will handler flipped the availability flag without telling the entities, and an entity only reads `available` when its state is written, so it kept whatever it had when it was created. The retained LWT almost always lands after the platforms are set up, which is exactly when that goes wrong. The coordinator now dispatches on change, and it starts optimistic rather than unavailable, so a board configured without a last will at all is not stuck offline forever.
 
 
 ## [2026.9.1] - 2026-09-21
 
-### Added
+### ✨ Added
 
 - **A `climate` entity per air conditioner**, built by the firmware instead of by learned codes. Tasmota's full IR driver assembles the whole frame from vendor, mode, temperature and fan speed, which replaces one stored code per temperature with one command. It sends `Channel` as well, which is what the existing Tasmota IRHVAC integration cannot do: its payload is built from fixed keys with no channel among them, so a second air conditioner leaves through the wrong emitter.
 - **The air conditioner configures itself.** Adding one asks for a name and an emitter, then says "point the remote at the board". The vendor and the model come out of the decoded frame, because the firmware already knows them. Nothing is looked up in a manual.
