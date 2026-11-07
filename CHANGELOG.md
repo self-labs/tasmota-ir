@@ -9,6 +9,12 @@ about compatibility, only when it was published.
 
 ## [Unreleased]
 
+## [2026.11.1] - 2026-11-07
+
+### 🐛 Fixed
+
+- **A board could be added with one emitter and no receiver, and stay that way.** Adding a board asks it once (`Gpio 255`) what it has, and Home Assistant sends a new subscription to the broker only after a cooldown that starts over with every other subscription, so the answer could reach the broker before anyone listened for it; a reply to any other command on the same topic was also taken for the answer. Either way the board was stored with one emitter and no receiver: learning and adding an air conditioner refused with "This board has no IRrecv GPIO assigned", and the emitter list showed only emitter 1. Seen on a KinCony AG8 with eight emitters and `IRrecv` added 26 seconds after it came online. The question now goes out again every 2 seconds for up to 10, only the answer to `Gpio 255` counts, and every setup asks the board again and stores what it reports, so a reload corrects a board added before this, as the error message always said it would. A board that does not answer keeps what was stored. 5 tests.
+
 ## [2026.10.3] - 2026-10-21
 
 ### ✨ Added
@@ -186,7 +192,8 @@ about compatibility, only when it was published.
 - **Partial captures are discarded at capture time.** A truncated frame arrives with `Data` of `"0x"` and `Bits` of `0`, and storing one produces a command that is accepted, listed and reproduces nothing.
 - **Entities attach to the board's existing device.** The device info declares `connections={(CONNECTION_NETWORK_MAC, mac)}`, which is what the Tasmota integration uses, so the IR entities sit next to the board's diagnostics instead of forming a second device for the same hardware.
 
-[Unreleased]: https://github.com/self-labs/tasmota-ir/compare/v2026.10.3...HEAD
+[Unreleased]: https://github.com/self-labs/tasmota-ir/compare/v2026.11.1...HEAD
+[2026.11.1]: https://github.com/self-labs/tasmota-ir/compare/v2026.10.3...v2026.11.1
 [2026.10.3]: https://github.com/self-labs/tasmota-ir/compare/v2026.10.2...v2026.10.3
 [2026.10.2]: https://github.com/self-labs/tasmota-ir/compare/v2026.10.1...v2026.10.2
 [2026.10.1]: https://github.com/self-labs/tasmota-ir/compare/v2026.9.11...v2026.10.1
