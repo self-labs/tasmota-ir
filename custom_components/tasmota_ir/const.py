@@ -150,6 +150,11 @@ STORAGE_SAVE_DELAY: Final = 5
 LEARN_TIMEOUT: Final = 20
 LEARN_TIMEOUT_UI: Final = 30
 PROBE_TIMEOUT: Final = 10
+# How often the probe asks again while the board has not answered. Home
+# Assistant only sends a new subscription to the broker after a cooldown that
+# restarts with every other subscription, so the first answer can arrive before
+# anyone listens for it.
+PROBE_RESEND: Final = 2
 DEFAULT_SEND_DELAY: Final = 0.4
 
 # A code above this size cannot be published: the board rejects anything larger

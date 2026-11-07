@@ -12,6 +12,7 @@ from pytest_homeassistant_custom_component.common import (
     async_fire_mqtt_message,
 )
 
+import custom_components.tasmota_ir as tasmota_ir_module
 from custom_components.tasmota_ir import typed as typed_module
 from custom_components.tasmota_ir.const import DOMAIN
 
@@ -50,6 +51,21 @@ LG_AC_FRAME = {
 @pytest.fixture(autouse=True)
 def auto_enable_custom_integrations(enable_custom_integrations: None) -> None:
     """Let Home Assistant load the integration from custom_components."""
+
+
+@pytest.fixture(autouse=True)
+def board_probe_at_setup(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Start from what the entry says, without asking the board again.
+
+    Setup asks the board in the background and keeps asking for a while when
+    nobody answers; left on, that ``Gpio 255`` lands among the publishes the
+    tests read back. tests/test_probe.py overrides this to exercise it.
+    """
+
+    async def _skip(*_args: Any) -> None:
+        return None
+
+    monkeypatch.setattr(tasmota_ir_module, "_async_refresh_board", _skip)
 
 
 @pytest.fixture

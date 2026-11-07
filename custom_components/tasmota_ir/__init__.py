@@ -19,6 +19,8 @@ from homeassistant.helpers.storage import Store
 from .const import (
     CONF_APPLIANCES,
     CONF_CHANNEL,
+    CONF_CHANNELS,
+    CONF_HAS_RECEIVER,
     CONF_KIND,
     CONF_MAX_TEMP,
     CONF_MIN_TEMP,
@@ -88,7 +90,43 @@ async def async_setup_entry(hass: HomeAssistant, entry: TasmotaIrConfigEntry) ->
 
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     entry.async_on_unload(entry.add_update_listener(_async_entry_updated))
+    entry.async_create_background_task(
+        hass, _async_refresh_board(hass, entry), f"{DOMAIN} probe {entry.title}"
+    )
     return True
+
+
+async def _async_refresh_board(
+    hass: HomeAssistant, entry: TasmotaIrConfigEntry
+) -> None:
+    """Ask the board again what it has, and store the answer when it changed.
+
+    The config flow asks once. A board whose answer was lost there is stored
+    with one emitter and no receiver, and could neither learn nor use its other
+    emitters. Asking at every setup corrects that on a reload, and picks up a
+    template changed since. A board that does not answer changes nothing.
+    """
+    probed = await entry.runtime_data.async_probe_channels()
+    if probed is None:
+        return
+    channels, has_receiver = probed
+    stored = (entry.data.get(CONF_CHANNELS), entry.data.get(CONF_HAS_RECEIVER))
+    if stored == (channels, has_receiver):
+        return
+    _LOGGER.info(
+        "%s has %d emitter(s) and %s, not %s and %s as stored; reloading",
+        entry.title,
+        channels,
+        "a receiver" if has_receiver else "no receiver",
+        stored[0],
+        "a receiver" if stored[1] else "no receiver",
+    )
+    # The update listener reloads the board, so the platforms that depend on the
+    # receiver (event, infrared) come back with it.
+    hass.config_entries.async_update_entry(
+        entry,
+        data={**entry.data, CONF_CHANNELS: channels, CONF_HAS_RECEIVER: has_receiver},
+    )
 
 
 async def async_unload_entry(hass: HomeAssistant, entry: TasmotaIrConfigEntry) -> bool:

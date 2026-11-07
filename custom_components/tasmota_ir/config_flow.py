@@ -57,6 +57,7 @@ from .const import (
     CONF_SWING_VERTICAL,
     CONF_TOPIC,
     CONF_VENDOR,
+    DEFAULT_CHANNEL,
     DEFAULT_MAX_TEMP,
     DEFAULT_MIN_TEMP,
     DEFAULT_SEND_DELAY,
@@ -281,8 +282,14 @@ class TasmotaIrConfigFlow(ConfigFlow, domain=DOMAIN):
         }
 
         # A throwaway coordinator, only to reuse the topic building and the probe.
+        # A board that does not answer starts with one emitter, which is what the
+        # firmware itself assumes with no channel, and no receiver; the setup
+        # asks again and corrects both once it does.
         probe = TasmotaIrCoordinator(self.hass, _FakeEntry(data))
-        channels, has_receiver = await probe.async_probe_channels()
+        channels, has_receiver = await probe.async_probe_channels() or (
+            DEFAULT_CHANNEL,
+            False,
+        )
 
         return self.async_create_entry(
             title=board["name"],

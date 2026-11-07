@@ -41,6 +41,7 @@ from .const import (
     KEY_RAW_DATA,
     MAX_CHANNELS,
     MAX_CODE_BYTES,
+    PROBE_RESEND,
     PROBE_TIMEOUT,
     PROTOCOL_RAW,
     RAW_FREQUENCY,
@@ -492,16 +493,25 @@ class TasmotaIrCoordinator:
             "self-labs.github.io/tasmota-kincony"
         )
 
-    async def async_probe_channels(self) -> tuple[int, bool]:
+    async def async_probe_channels(self) -> tuple[int, bool] | None:
         """Ask the board how many emitters it has and whether it can receive.
 
-        Returns the emitter count and whether an IRrecv GPIO is assigned. Falls
-        back to a single emitter, which is what the firmware itself assumes when
-        no channel is given.
+        Returns the emitter count and whether an IRrecv GPIO is assigned, or
+        None when the board did not answer. ``Gpio 255`` only reads, so it goes
+        out again every PROBE_RESEND seconds: a single try lost its answer
+        whenever Home Assistant was busy subscribing (a board that had just come
+        online, a restart), and the board was stored with one emitter and no
+        receiver.
         """
-        reply = await self._async_command_reply(CMND_GPIO, "255")
+        reply = await self._async_command_reply(
+            CMND_GPIO,
+            "255",
+            wanted=is_gpio_reply,
+            timeout=PROBE_TIMEOUT,
+            resend_every=PROBE_RESEND,
+        )
         if reply is None:
-            return DEFAULT_CHANNEL, False
+            return None
         return count_ir_gpios(reply)
 
     async def _async_command_reply(
@@ -510,10 +520,13 @@ class TasmotaIrCoordinator:
         payload: str,
         wanted: Callable[[dict[str, Any]], bool] | None = None,
         timeout: float = PROBE_TIMEOUT,
+        resend_every: float | None = None,
     ) -> dict[str, Any] | None:
         """Publish a command and wait for the matching stat/ reply.
 
         ``wanted`` skips replies to other commands, which share the topic.
+        ``resend_every`` publishes the command again while nothing has come
+        back. Only for a command that reads: one that acts would act twice.
         """
         future: asyncio.Future[dict[str, Any]] = self.hass.loop.create_future()
 
@@ -532,9 +545,16 @@ class TasmotaIrCoordinator:
             self.hass, self._build_topic("stat", "RESULT"), _handle
         )
         try:
-            await self.async_send_raw(command, payload)
             async with asyncio.timeout(timeout):
-                return await future
+                while True:
+                    await self.async_send_raw(command, payload)
+                    if resend_every is None:
+                        return await future
+                    done, _pending = await asyncio.wait(
+                        (future,), timeout=resend_every
+                    )
+                    if done:
+                        return future.result()
         except TimeoutError:
             return None
         finally:
@@ -796,6 +816,19 @@ def irsend_reply_text(reply: dict[str, Any]) -> str | None:
 def is_irsend_reply(reply: dict[str, Any]) -> bool:
     """Whether a stat/RESULT payload answers an IRSend, not some other command."""
     return irsend_reply_text(reply) is not None
+
+
+def is_gpio_reply(reply: dict[str, Any]) -> bool:
+    """Whether a stat/RESULT payload answers ``Gpio 255``, not some other command.
+
+    That answer maps each pin, ``{"GPIO9": {"IRsend1": 1056}, ...}``. Taking any
+    other reply on the topic for it reads as a board with no emitter and no
+    receiver.
+    """
+    return any(
+        key.startswith("GPIO") and isinstance(value, dict)
+        for key, value in reply.items()
+    )
 
 
 def count_ir_gpios(gpio_reply: dict[str, Any]) -> tuple[int, bool]:
