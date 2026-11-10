@@ -59,7 +59,7 @@
             "channel": "Change the emitter",
             "rename": "Rename",
             "move": "Move to another board",
-            "copy": "Copy to another board"
+            "copy": "Copy to another emitter or board"
           }
         },
         "learn": {
@@ -155,8 +155,8 @@
           }
         },
         "copy": {
-          "title": "Copy to another board",
-          "description": "Which board gets a copy of {name}?",
+          "title": "Copy to another emitter or board",
+          "description": "Which board gets a copy of {name}? Pick the one it is on to put the copy on another emitter there.",
           "data": {
             "board": "Board"
           }
@@ -170,11 +170,27 @@
           }
         },
         "copy_target": {
-          "title": "Copy to another board",
+          "title": "Copy to another emitter or board",
           "description": "{board} gets its own {name}, with every learned command, and this one stays as it is. Pick the emitter there: the emitters already in use say which appliance is on them.",
           "data": {
             "channel": "Emitter",
             "name": "Name"
+          }
+        },
+        "copy_here": {
+          "title": "Copy to another emitter or board",
+          "description": "Another {name} goes on {board}, with everything it has learned or been set up with, and this one stays as it is. Pick the emitter and the name of the copy: the emitters already in use say which appliance is on them.",
+          "data": {
+            "channel": "Emitter",
+            "name": "Name"
+          }
+        },
+        "copy_ready": {
+          "title": "Copies of {name}",
+          "description": "These are created on {board} when you choose Create the copies, as name and emitter number:\n\n{copies}\n\nNothing exists until then, and closing this window discards them.",
+          "menu_options": {
+            "copy_again": "Add another copy",
+            "copy_done": "Create the copies"
           }
         }
       },
@@ -198,7 +214,7 @@
         "done": "Done.",
         "reconfigure_successful": "Saved.",
         "moved": "{name} is now on {board}, emitter {channel}.",
-        "copied": "{board} now has {name} too, on emitter {channel}.",
+        "copied": "{board} now has {copies}.",
         "no_other_board": "There is no other board to send it to. Add that board to Tasmota IR first."
       }
     },
@@ -237,7 +253,7 @@
             "channel": "Change the emitter",
             "rename": "Rename",
             "move": "Move to another board",
-            "copy": "Copy to another board"
+            "copy": "Copy to another emitter or board"
           }
         },
         "settings": {
@@ -290,8 +306,8 @@
           }
         },
         "copy": {
-          "title": "Copy to another board",
-          "description": "Which board gets a copy of {name}?",
+          "title": "Copy to another emitter or board",
+          "description": "Which board gets a copy of {name}? Pick the one it is on to put the copy on another emitter there.",
           "data": {
             "board": "Board"
           }
@@ -305,11 +321,27 @@
           }
         },
         "copy_target": {
-          "title": "Copy to another board",
+          "title": "Copy to another emitter or board",
           "description": "{board} gets its own {name}, with the same settings, and this one stays as it is. Pick the emitter there: the emitters already in use say which appliance is on them.",
           "data": {
             "channel": "Emitter",
             "name": "Name"
+          }
+        },
+        "copy_here": {
+          "title": "Copy to another emitter or board",
+          "description": "Another {name} goes on {board}, with everything it has learned or been set up with, and this one stays as it is. Pick the emitter and the name of the copy: the emitters already in use say which appliance is on them.",
+          "data": {
+            "channel": "Emitter",
+            "name": "Name"
+          }
+        },
+        "copy_ready": {
+          "title": "Copies of {name}",
+          "description": "These are created on {board} when you choose Create the copies, as name and emitter number:\n\n{copies}\n\nNothing exists until then, and closing this window discards them.",
+          "menu_options": {
+            "copy_again": "Add another copy",
+            "copy_done": "Create the copies"
           }
         }
       },
@@ -330,7 +362,7 @@
         "no_receiver": "This board has no IRrecv GPIO assigned, so it cannot learn. Assign one in the Tasmota template and reload the integration.",
         "reconfigure_successful": "Saved.",
         "moved": "{name} is now on {board}, emitter {channel}.",
-        "copied": "{board} now has {name} too, on emitter {channel}.",
+        "copied": "{board} now has {copies}.",
         "no_other_board": "There is no other board to send it to. Add that board to Tasmota IR first."
       }
     },
@@ -432,7 +464,7 @@
             "channel": "Change the emitter",
             "rename": "Rename",
             "move": "Move to another board",
-            "copy": "Copy to another board"
+            "copy": "Copy to another emitter or board"
           }
         },
         "channel": {
@@ -465,8 +497,8 @@
           }
         },
         "copy": {
-          "title": "Copy to another board",
-          "description": "Which board gets a copy of {name}?",
+          "title": "Copy to another emitter or board",
+          "description": "Which board gets a copy of {name}? Pick the one it is on to put the copy on another emitter there.",
           "data": {
             "board": "Board"
           }
@@ -480,11 +512,27 @@
           }
         },
         "copy_target": {
-          "title": "Copy to another board",
+          "title": "Copy to another emitter or board",
           "description": "{board} gets its own {name}, with every learned command, and this one stays as it is. Pick the emitter there: the emitters already in use say which appliance is on them.",
           "data": {
             "channel": "Emitter",
             "name": "Name"
+          }
+        },
+        "copy_here": {
+          "title": "Copy to another emitter or board",
+          "description": "Another {name} goes on {board}, with everything it has learned or been set up with, and this one stays as it is. Pick the emitter and the name of the copy: the emitters already in use say which appliance is on them.",
+          "data": {
+            "channel": "Emitter",
+            "name": "Name"
+          }
+        },
+        "copy_ready": {
+          "title": "Copies of {name}",
+          "description": "These are created on {board} when you choose Create the copies, as name and emitter number:\n\n{copies}\n\nNothing exists until then, and closing this window discards them.",
+          "menu_options": {
+            "copy_again": "Add another copy",
+            "copy_done": "Create the copies"
           }
         }
       },
@@ -508,7 +556,7 @@
         "no_receiver": "This board has no IRrecv GPIO assigned, so it cannot learn. Assign one in the Tasmota template and reload the integration.",
         "reconfigure_successful": "Saved.",
         "moved": "{name} is now on {board}, emitter {channel}.",
-        "copied": "{board} now has {name} too, on emitter {channel}.",
+        "copied": "{board} now has {copies}.",
         "no_other_board": "There is no other board to send it to. Add that board to Tasmota IR first."
       }
     },
@@ -610,7 +658,7 @@
             "channel": "Change the emitter",
             "rename": "Rename",
             "move": "Move to another board",
-            "copy": "Copy to another board"
+            "copy": "Copy to another emitter or board"
           }
         },
         "channel": {
@@ -643,8 +691,8 @@
           }
         },
         "copy": {
-          "title": "Copy to another board",
-          "description": "Which board gets a copy of {name}?",
+          "title": "Copy to another emitter or board",
+          "description": "Which board gets a copy of {name}? Pick the one it is on to put the copy on another emitter there.",
           "data": {
             "board": "Board"
           }
@@ -658,11 +706,27 @@
           }
         },
         "copy_target": {
-          "title": "Copy to another board",
+          "title": "Copy to another emitter or board",
           "description": "{board} gets its own {name}, with every learned command, and this one stays as it is. Pick the emitter there: the emitters already in use say which appliance is on them.",
           "data": {
             "channel": "Emitter",
             "name": "Name"
+          }
+        },
+        "copy_here": {
+          "title": "Copy to another emitter or board",
+          "description": "Another {name} goes on {board}, with everything it has learned or been set up with, and this one stays as it is. Pick the emitter and the name of the copy: the emitters already in use say which appliance is on them.",
+          "data": {
+            "channel": "Emitter",
+            "name": "Name"
+          }
+        },
+        "copy_ready": {
+          "title": "Copies of {name}",
+          "description": "These are created on {board} when you choose Create the copies, as name and emitter number:\n\n{copies}\n\nNothing exists until then, and closing this window discards them.",
+          "menu_options": {
+            "copy_again": "Add another copy",
+            "copy_done": "Create the copies"
           }
         }
       },
@@ -686,7 +750,7 @@
         "no_receiver": "This board has no IRrecv GPIO assigned, so it cannot learn. Assign one in the Tasmota template and reload the integration.",
         "reconfigure_successful": "Saved.",
         "moved": "{name} is now on {board}, emitter {channel}.",
-        "copied": "{board} now has {name} too, on emitter {channel}.",
+        "copied": "{board} now has {copies}.",
         "no_other_board": "There is no other board to send it to. Add that board to Tasmota IR first."
       }
     },
@@ -788,7 +852,7 @@
             "channel": "Change the emitter",
             "rename": "Rename",
             "move": "Move to another board",
-            "copy": "Copy to another board"
+            "copy": "Copy to another emitter or board"
           }
         },
         "channel": {
@@ -821,8 +885,8 @@
           }
         },
         "copy": {
-          "title": "Copy to another board",
-          "description": "Which board gets a copy of {name}?",
+          "title": "Copy to another emitter or board",
+          "description": "Which board gets a copy of {name}? Pick the one it is on to put the copy on another emitter there.",
           "data": {
             "board": "Board"
           }
@@ -836,11 +900,27 @@
           }
         },
         "copy_target": {
-          "title": "Copy to another board",
+          "title": "Copy to another emitter or board",
           "description": "{board} gets its own {name}, with every learned command, and this one stays as it is. Pick the emitter there: the emitters already in use say which appliance is on them.",
           "data": {
             "channel": "Emitter",
             "name": "Name"
+          }
+        },
+        "copy_here": {
+          "title": "Copy to another emitter or board",
+          "description": "Another {name} goes on {board}, with everything it has learned or been set up with, and this one stays as it is. Pick the emitter and the name of the copy: the emitters already in use say which appliance is on them.",
+          "data": {
+            "channel": "Emitter",
+            "name": "Name"
+          }
+        },
+        "copy_ready": {
+          "title": "Copies of {name}",
+          "description": "These are created on {board} when you choose Create the copies, as name and emitter number:\n\n{copies}\n\nNothing exists until then, and closing this window discards them.",
+          "menu_options": {
+            "copy_again": "Add another copy",
+            "copy_done": "Create the copies"
           }
         }
       },
@@ -864,7 +944,7 @@
         "no_receiver": "This board has no IRrecv GPIO assigned, so it cannot learn. Assign one in the Tasmota template and reload the integration.",
         "reconfigure_successful": "Saved.",
         "moved": "{name} is now on {board}, emitter {channel}.",
-        "copied": "{board} now has {name} too, on emitter {channel}.",
+        "copied": "{board} now has {copies}.",
         "no_other_board": "There is no other board to send it to. Add that board to Tasmota IR first."
       }
     },
@@ -966,7 +1046,7 @@
             "channel": "Change the emitter",
             "rename": "Rename",
             "move": "Move to another board",
-            "copy": "Copy to another board"
+            "copy": "Copy to another emitter or board"
           }
         },
         "channel": {
@@ -999,8 +1079,8 @@
           }
         },
         "copy": {
-          "title": "Copy to another board",
-          "description": "Which board gets a copy of {name}?",
+          "title": "Copy to another emitter or board",
+          "description": "Which board gets a copy of {name}? Pick the one it is on to put the copy on another emitter there.",
           "data": {
             "board": "Board"
           }
@@ -1014,11 +1094,27 @@
           }
         },
         "copy_target": {
-          "title": "Copy to another board",
+          "title": "Copy to another emitter or board",
           "description": "{board} gets its own {name}, with every learned command, and this one stays as it is. Pick the emitter there: the emitters already in use say which appliance is on them.",
           "data": {
             "channel": "Emitter",
             "name": "Name"
+          }
+        },
+        "copy_here": {
+          "title": "Copy to another emitter or board",
+          "description": "Another {name} goes on {board}, with everything it has learned or been set up with, and this one stays as it is. Pick the emitter and the name of the copy: the emitters already in use say which appliance is on them.",
+          "data": {
+            "channel": "Emitter",
+            "name": "Name"
+          }
+        },
+        "copy_ready": {
+          "title": "Copies of {name}",
+          "description": "These are created on {board} when you choose Create the copies, as name and emitter number:\n\n{copies}\n\nNothing exists until then, and closing this window discards them.",
+          "menu_options": {
+            "copy_again": "Add another copy",
+            "copy_done": "Create the copies"
           }
         }
       },
@@ -1042,7 +1138,7 @@
         "no_receiver": "This board has no IRrecv GPIO assigned, so it cannot learn. Assign one in the Tasmota template and reload the integration.",
         "reconfigure_successful": "Saved.",
         "moved": "{name} is now on {board}, emitter {channel}.",
-        "copied": "{board} now has {name} too, on emitter {channel}.",
+        "copied": "{board} now has {copies}.",
         "no_other_board": "There is no other board to send it to. Add that board to Tasmota IR first."
       }
     },
@@ -1144,7 +1240,7 @@
             "channel": "Change the emitter",
             "rename": "Rename",
             "move": "Move to another board",
-            "copy": "Copy to another board"
+            "copy": "Copy to another emitter or board"
           }
         },
         "channel": {
@@ -1177,8 +1273,8 @@
           }
         },
         "copy": {
-          "title": "Copy to another board",
-          "description": "Which board gets a copy of {name}?",
+          "title": "Copy to another emitter or board",
+          "description": "Which board gets a copy of {name}? Pick the one it is on to put the copy on another emitter there.",
           "data": {
             "board": "Board"
           }
@@ -1192,11 +1288,27 @@
           }
         },
         "copy_target": {
-          "title": "Copy to another board",
+          "title": "Copy to another emitter or board",
           "description": "{board} gets its own {name}, with every learned command, and this one stays as it is. Pick the emitter there: the emitters already in use say which appliance is on them.",
           "data": {
             "channel": "Emitter",
             "name": "Name"
+          }
+        },
+        "copy_here": {
+          "title": "Copy to another emitter or board",
+          "description": "Another {name} goes on {board}, with everything it has learned or been set up with, and this one stays as it is. Pick the emitter and the name of the copy: the emitters already in use say which appliance is on them.",
+          "data": {
+            "channel": "Emitter",
+            "name": "Name"
+          }
+        },
+        "copy_ready": {
+          "title": "Copies of {name}",
+          "description": "These are created on {board} when you choose Create the copies, as name and emitter number:\n\n{copies}\n\nNothing exists until then, and closing this window discards them.",
+          "menu_options": {
+            "copy_again": "Add another copy",
+            "copy_done": "Create the copies"
           }
         }
       },
@@ -1220,7 +1332,7 @@
         "no_receiver": "This board has no IRrecv GPIO assigned, so it cannot learn. Assign one in the Tasmota template and reload the integration.",
         "reconfigure_successful": "Saved.",
         "moved": "{name} is now on {board}, emitter {channel}.",
-        "copied": "{board} now has {name} too, on emitter {channel}.",
+        "copied": "{board} now has {copies}.",
         "no_other_board": "There is no other board to send it to. Add that board to Tasmota IR first."
       }
     },

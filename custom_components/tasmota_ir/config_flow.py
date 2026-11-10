@@ -587,6 +587,8 @@ class _TasmotaIrSubentryFlow(ConfigSubentryFlow):
         self._learn_task: asyncio.Task[dict[str, Any] | None] | None = None
         self._received: dict[str, Any] | None = None
         self._target_id: str = ""
+        # Copies asked for and not created yet: (name, emitter) on the target.
+        self._copies: list[tuple[str, int]] = []
 
     # ---- helpers -------------------------------------------------------
 
@@ -613,6 +615,23 @@ class _TasmotaIrSubentryFlow(ConfigSubentryFlow):
             for sub_id, sub in (entry or self._get_entry()).subentries.items()
             if sub_id != ignore
         )
+
+    def _name_pending(self, name: str) -> bool:
+        """Whether a copy waiting to be created already has this name."""
+        wanted = name.strip().casefold()
+        return any(pending.casefold() == wanted for pending, _ in self._copies)
+
+    def _free_name(self, title: str, target: ConfigEntry) -> str:
+        """``title``, or the first "title 2", "title 3"... that ``target`` lacks.
+
+        The original's own name is always taken on its own board, so offering it
+        as the default would make the form fail on its first submit.
+        """
+        name, number = title, 1
+        while self._name_taken(name, entry=target) or self._name_pending(name):
+            number += 1
+            name = f"{title} {number}"
+        return name
 
     def _placeholders(self) -> dict[str, str]:
         return {"name": self._name}
@@ -785,18 +804,75 @@ class _TasmotaIrSubentryFlow(ConfigSubentryFlow):
         """Pick the emitter, and the name, the copy will have there."""
         return await self._async_step_target("copy_target", user_input, keep=True)
 
+    async def async_step_copy_here(
+        self, user_input: dict[str, Any] | None = None
+    ) -> SubentryFlowResult:
+        """Pick the emitter, and the name, of a copy that stays on this board."""
+        return await self._async_step_target("copy_here", user_input, keep=True)
+
+    async def async_step_copy_ready(
+        self, user_input: dict[str, Any] | None = None
+    ) -> SubentryFlowResult:
+        """What is waiting to be created, and whether to add another copy.
+
+        Home Assistant only shows a step the flow can also handle, so the menu
+        needs a step of its own behind it, as the emitter test does.
+        """
+        target = self._target_boards(keep=True).get(self._target_id)
+        if target is None or not self._copies:
+            return self.async_abort(reason="board_not_loaded")
+        return self._copies_menu(target)
+
+    async def async_step_copy_again(
+        self, user_input: dict[str, Any] | None = None
+    ) -> SubentryFlowResult:
+        """Ask for one more copy, with nothing created yet."""
+        return await self._async_step_target(self._target_step("copy"), None, keep=True)
+
+    async def async_step_copy_done(
+        self, user_input: dict[str, Any] | None = None
+    ) -> SubentryFlowResult:
+        """Create every copy asked for, in one go."""
+        target = self._target_boards(keep=True).get(self._target_id)
+        if target is None or not self._copies:
+            return self.async_abort(reason="board_not_loaded")
+        return await self._async_transfer(target, self._copies, keep=True)
+
+    def _target_boards(self, keep: bool) -> dict[str, ConfigEntry]:
+        """The boards a transfer can go to, this one first when it can go here.
+
+        A copy may stay on this board, on another emitter. A move to this board
+        would only change the emitter, which has a step of its own.
+        """
+        boards = self._other_boards()
+        entry = self._get_entry()
+        if keep and entry.state is ConfigEntryState.LOADED:
+            return {entry.entry_id: entry, **boards}
+        return boards
+
+    def _target_step(self, action: str) -> str:
+        """The form that asks for the emitter and the name.
+
+        A copy that stays on this board has its own text: "this board gets its
+        own" reads wrong when it is the board the person is standing on.
+        """
+        if action == "copy" and self._target_id == self._get_entry().entry_id:
+            return "copy_here"
+        return f"{action}_target"
+
     async def _async_step_pick_board(
         self, action: str, user_input: dict[str, Any] | None
     ) -> SubentryFlowResult:
-        """Choose the board. With only one other, there is nothing to choose."""
-        boards = self._other_boards()
+        """Choose the board. With only one to pick, there is nothing to choose."""
+        boards = self._target_boards(keep=action == "copy")
         if not boards:
             return self.async_abort(reason="no_other_board")
         if user_input is not None or len(boards) == 1:
             self._target_id = (
                 user_input[CONF_BOARD] if user_input else next(iter(boards))
             )
-            return await getattr(self, f"async_step_{action}_target")()
+            self._copies = []
+            return await getattr(self, f"async_step_{self._target_step(action)}")()
         return self.async_show_form(
             step_id=action,
             data_schema=board_schema(boards),
@@ -809,26 +885,32 @@ class _TasmotaIrSubentryFlow(ConfigSubentryFlow):
         """The emitter and name on the other board, then the transfer itself.
 
         The emitter has to be chosen again: the other board may have fewer, and
-        what sits on each of them is different there.
+        what sits on each of them is different there. A move goes through at
+        once. A copy is only written down: nothing is created until the menu
+        after it says so, because every subentry added reloads the board, and
+        with a copy that stays here the next one would arrive in the middle of
+        that reload.
         """
         subentry = self._get_reconfigure_subentry()
-        target = self._other_boards().get(self._target_id)
+        target = self._target_boards(keep).get(self._target_id)
         if target is None:
             return self.async_abort(reason="board_not_loaded")
 
         errors: dict[str, str] = {}
         if user_input is not None:
             name = user_input[CONF_NAME].strip()
+            channel = int(user_input[CONF_CHANNEL])
             if not keep and already_there(target, [subentry]):
                 errors["base"] = "already_there"
             elif not name:
                 errors[CONF_NAME] = "name_empty"
-            elif self._name_taken(name, entry=target):
+            elif self._name_taken(name, entry=target) or self._name_pending(name):
                 errors[CONF_NAME] = "name_taken"
+            elif keep:
+                self._copies.append((name, channel))
+                return self._copies_menu(target)
             else:
-                return await self._async_transfer(
-                    target, name, int(user_input[CONF_CHANNEL]), keep
-                )
+                return await self._async_transfer(target, [(name, channel)], keep)
 
         channels = min(int(target.data.get(CONF_CHANNELS, 1)), MAX_CHANNELS)
         current = int(subentry.data.get(CONF_CHANNEL, 1))
@@ -839,32 +921,61 @@ class _TasmotaIrSubentryFlow(ConfigSubentryFlow):
                     vol.Required(
                         CONF_CHANNEL, default=str(current if current <= channels else 1)
                     ): self._channel_selector(entry=target),
-                    vol.Required(CONF_NAME, default=subentry.title): str,
+                    vol.Required(
+                        CONF_NAME,
+                        default=(
+                            self._free_name(subentry.title, target)
+                            if keep
+                            else subentry.title
+                        ),
+                    ): str,
                 }
             ),
             errors=errors,
             description_placeholders={"name": subentry.title, "board": target.title},
         )
 
+    def _copies_menu(self, target: ConfigEntry) -> SubentryFlowResult:
+        """The copies waiting, with the choice of adding one more or creating them."""
+        return self.async_show_menu(
+            step_id="copy_ready",
+            menu_options=["copy_again", "copy_done"],
+            description_placeholders={
+                "name": self._get_reconfigure_subentry().title,
+                "board": target.title,
+                "copies": "\n".join(
+                    f"- {name} ({channel})" for name, channel in self._copies
+                ),
+            },
+        )
+
     async def _async_transfer(
-        self, target: ConfigEntry, name: str, channel: int, keep: bool
+        self, target: ConfigEntry, copies: list[tuple[str, int]], keep: bool
     ) -> SubentryFlowResult:
-        """Hand the appliance to the other board, as a copy or as a move."""
+        """Hand the appliance to the other board, as copies or as a move.
+
+        All the copies go in one call: the codes of every one are written before
+        the first subentry is added, and the reloads those additions start find
+        them already owned.
+        """
         if self._coordinator() is None:
             return self.async_abort(reason="board_not_loaded")
+        subentry = self._get_reconfigure_subentry()
         await async_transfer_subentries(
             self.hass,
             self._get_entry(),
             target,
-            [(self._get_reconfigure_subentry(), name, channel)],
+            [(subentry, name, channel) for name, channel in copies],
             keep=keep,
         )
+        name, channel = copies[0]
         return self.async_abort(
             reason="copied" if keep else "moved",
             description_placeholders={
                 "name": name,
                 "board": target.title,
                 "channel": str(channel),
+                "copies": ", ".join(copied for copied, _ in copies),
             },
         )
 

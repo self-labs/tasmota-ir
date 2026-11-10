@@ -9,6 +9,15 @@ about compatibility, only when it was published.
 
 ## [Unreleased]
 
+### ✨ Added
+
+- **Copy an appliance onto another emitter of the same board, as many times as needed.** A house of identical units (the same air conditioner in every room of a clinic) no longer needs each one learned or read from scratch. **Manage appliance → Copy to another emitter or board** now lists the board the appliance is on first (with a single board there is no list); each copy asks an emitter, which may already be in use by another appliance, and a name, and the form suggests a free one (`Ar 2`, `Ar 3`). The menu after each form offers **Add another copy** or **Create the copies**; nothing is created until then, and all the copies are created in one go, the codes of every one written before the first is added, so none is lost to the reloads that follow. A copy has the original's learned commands, or the vendor, model and settings of an air conditioner. Works for every appliance type except a sequence, which has no copy. 6 tests, including a reload after the copies to prove the codes survive it.
+
+### 🔧 Changed
+
+- **Copying to another board now ends in the same menu**: after the emitter and name there, **Add another copy** or **Create the copies**, instead of creating the copy at once. The board list for a copy also includes the board the appliance is on, so a house with two boards sees both. **Move to another board** is unchanged and still never lists its own board.
+- **The "copied" message names every copy created** (`Hubb IR1 now has Ar 2, Ar 3.`) instead of a single appliance and emitter.
+
 ## [2026.11.1] - 2026-11-07
 
 ### 🐛 Fixed

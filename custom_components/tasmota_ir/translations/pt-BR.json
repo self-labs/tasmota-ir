@@ -59,7 +59,7 @@
             "channel": "Trocar o emissor",
             "rename": "Renomear",
             "move": "Mover para outra placa",
-            "copy": "Copiar para outra placa"
+            "copy": "Copiar para outro emissor ou placa"
           }
         },
         "learn": {
@@ -155,8 +155,8 @@
           }
         },
         "copy": {
-          "title": "Copiar para outra placa",
-          "description": "Qual placa recebe uma cópia de {name}?",
+          "title": "Copiar para outro emissor ou placa",
+          "description": "Qual placa recebe uma cópia de {name}? Escolha a placa em que ele já está para pôr a cópia em outro emissor dela.",
           "data": {
             "board": "Placa"
           }
@@ -170,11 +170,27 @@
           }
         },
         "copy_target": {
-          "title": "Copiar para outra placa",
+          "title": "Copiar para outro emissor ou placa",
           "description": "{board} ganha o seu próprio {name}, com todos os comandos aprendidos, e este continua como está. Escolha o emissor lá: os emissores já usados mostram por qual aparelho.",
           "data": {
             "channel": "Emissor",
             "name": "Nome"
+          }
+        },
+        "copy_here": {
+          "title": "Copiar para outro emissor ou placa",
+          "description": "Mais um {name} vai para a {board}, com tudo o que ele já aprendeu ou tem configurado, e este continua como está. Escolha o emissor e o nome da cópia: os emissores já usados mostram por qual aparelho.",
+          "data": {
+            "channel": "Emissor",
+            "name": "Nome"
+          }
+        },
+        "copy_ready": {
+          "title": "Cópias de {name}",
+          "description": "Estas cópias são criadas na {board} quando você escolher Criar as cópias, no formato nome e número do emissor:\n\n{copies}\n\nNada existe até lá, e fechar esta janela descarta tudo.",
+          "menu_options": {
+            "copy_again": "Adicionar outra cópia",
+            "copy_done": "Criar as cópias"
           }
         }
       },
@@ -198,7 +214,7 @@
         "done": "Pronto.",
         "reconfigure_successful": "Salvo.",
         "moved": "{name} agora está na {board}, no emissor {channel}.",
-        "copied": "A {board} agora também tem {name}, no emissor {channel}.",
+        "copied": "A {board} agora também tem: {copies}.",
         "no_other_board": "Não há outra placa para onde levar. Adicione essa placa ao Tasmota IR primeiro."
       }
     },
@@ -237,7 +253,7 @@
             "channel": "Trocar o emissor",
             "rename": "Renomear",
             "move": "Mover para outra placa",
-            "copy": "Copiar para outra placa"
+            "copy": "Copiar para outro emissor ou placa"
           }
         },
         "settings": {
@@ -290,8 +306,8 @@
           }
         },
         "copy": {
-          "title": "Copiar para outra placa",
-          "description": "Qual placa recebe uma cópia de {name}?",
+          "title": "Copiar para outro emissor ou placa",
+          "description": "Qual placa recebe uma cópia de {name}? Escolha a placa em que ele já está para pôr a cópia em outro emissor dela.",
           "data": {
             "board": "Placa"
           }
@@ -305,11 +321,27 @@
           }
         },
         "copy_target": {
-          "title": "Copiar para outra placa",
+          "title": "Copiar para outro emissor ou placa",
           "description": "{board} ganha o seu próprio {name}, com as mesmas configurações, e este continua como está. Escolha o emissor lá: os emissores já usados mostram por qual aparelho.",
           "data": {
             "channel": "Emissor",
             "name": "Nome"
+          }
+        },
+        "copy_here": {
+          "title": "Copiar para outro emissor ou placa",
+          "description": "Mais um {name} vai para a {board}, com tudo o que ele já aprendeu ou tem configurado, e este continua como está. Escolha o emissor e o nome da cópia: os emissores já usados mostram por qual aparelho.",
+          "data": {
+            "channel": "Emissor",
+            "name": "Nome"
+          }
+        },
+        "copy_ready": {
+          "title": "Cópias de {name}",
+          "description": "Estas cópias são criadas na {board} quando você escolher Criar as cópias, no formato nome e número do emissor:\n\n{copies}\n\nNada existe até lá, e fechar esta janela descarta tudo.",
+          "menu_options": {
+            "copy_again": "Adicionar outra cópia",
+            "copy_done": "Criar as cópias"
           }
         }
       },
@@ -330,7 +362,7 @@
         "no_receiver": "Esta placa não tem GPIO de IRrecv, então não consegue aprender. Atribua um no template do Tasmota e recarregue a integração.",
         "reconfigure_successful": "Salvo.",
         "moved": "{name} agora está na {board}, no emissor {channel}.",
-        "copied": "A {board} agora também tem {name}, no emissor {channel}.",
+        "copied": "A {board} agora também tem: {copies}.",
         "no_other_board": "Não há outra placa para onde levar. Adicione essa placa ao Tasmota IR primeiro."
       }
     },
@@ -432,7 +464,7 @@
             "channel": "Trocar o emissor",
             "rename": "Renomear",
             "move": "Mover para outra placa",
-            "copy": "Copiar para outra placa"
+            "copy": "Copiar para outro emissor ou placa"
           }
         },
         "channel": {
@@ -465,8 +497,8 @@
           }
         },
         "copy": {
-          "title": "Copiar para outra placa",
-          "description": "Qual placa recebe uma cópia de {name}?",
+          "title": "Copiar para outro emissor ou placa",
+          "description": "Qual placa recebe uma cópia de {name}? Escolha a placa em que ele já está para pôr a cópia em outro emissor dela.",
           "data": {
             "board": "Placa"
           }
@@ -480,11 +512,27 @@
           }
         },
         "copy_target": {
-          "title": "Copiar para outra placa",
+          "title": "Copiar para outro emissor ou placa",
           "description": "{board} ganha o seu próprio {name}, com todos os comandos aprendidos, e este continua como está. Escolha o emissor lá: os emissores já usados mostram por qual aparelho.",
           "data": {
             "channel": "Emissor",
             "name": "Nome"
+          }
+        },
+        "copy_here": {
+          "title": "Copiar para outro emissor ou placa",
+          "description": "Mais um {name} vai para a {board}, com tudo o que ele já aprendeu ou tem configurado, e este continua como está. Escolha o emissor e o nome da cópia: os emissores já usados mostram por qual aparelho.",
+          "data": {
+            "channel": "Emissor",
+            "name": "Nome"
+          }
+        },
+        "copy_ready": {
+          "title": "Cópias de {name}",
+          "description": "Estas cópias são criadas na {board} quando você escolher Criar as cópias, no formato nome e número do emissor:\n\n{copies}\n\nNada existe até lá, e fechar esta janela descarta tudo.",
+          "menu_options": {
+            "copy_again": "Adicionar outra cópia",
+            "copy_done": "Criar as cópias"
           }
         }
       },
@@ -508,7 +556,7 @@
         "no_receiver": "Esta placa não tem GPIO de IRrecv, então não consegue aprender. Atribua um no template do Tasmota e recarregue a integração.",
         "reconfigure_successful": "Salvo.",
         "moved": "{name} agora está na {board}, no emissor {channel}.",
-        "copied": "A {board} agora também tem {name}, no emissor {channel}.",
+        "copied": "A {board} agora também tem: {copies}.",
         "no_other_board": "Não há outra placa para onde levar. Adicione essa placa ao Tasmota IR primeiro."
       }
     },
@@ -610,7 +658,7 @@
             "channel": "Trocar o emissor",
             "rename": "Renomear",
             "move": "Mover para outra placa",
-            "copy": "Copiar para outra placa"
+            "copy": "Copiar para outro emissor ou placa"
           }
         },
         "channel": {
@@ -643,8 +691,8 @@
           }
         },
         "copy": {
-          "title": "Copiar para outra placa",
-          "description": "Qual placa recebe uma cópia de {name}?",
+          "title": "Copiar para outro emissor ou placa",
+          "description": "Qual placa recebe uma cópia de {name}? Escolha a placa em que ele já está para pôr a cópia em outro emissor dela.",
           "data": {
             "board": "Placa"
           }
@@ -658,11 +706,27 @@
           }
         },
         "copy_target": {
-          "title": "Copiar para outra placa",
+          "title": "Copiar para outro emissor ou placa",
           "description": "{board} ganha o seu próprio {name}, com todos os comandos aprendidos, e este continua como está. Escolha o emissor lá: os emissores já usados mostram por qual aparelho.",
           "data": {
             "channel": "Emissor",
             "name": "Nome"
+          }
+        },
+        "copy_here": {
+          "title": "Copiar para outro emissor ou placa",
+          "description": "Mais um {name} vai para a {board}, com tudo o que ele já aprendeu ou tem configurado, e este continua como está. Escolha o emissor e o nome da cópia: os emissores já usados mostram por qual aparelho.",
+          "data": {
+            "channel": "Emissor",
+            "name": "Nome"
+          }
+        },
+        "copy_ready": {
+          "title": "Cópias de {name}",
+          "description": "Estas cópias são criadas na {board} quando você escolher Criar as cópias, no formato nome e número do emissor:\n\n{copies}\n\nNada existe até lá, e fechar esta janela descarta tudo.",
+          "menu_options": {
+            "copy_again": "Adicionar outra cópia",
+            "copy_done": "Criar as cópias"
           }
         }
       },
@@ -686,7 +750,7 @@
         "no_receiver": "Esta placa não tem GPIO de IRrecv, então não consegue aprender. Atribua um no template do Tasmota e recarregue a integração.",
         "reconfigure_successful": "Salvo.",
         "moved": "{name} agora está na {board}, no emissor {channel}.",
-        "copied": "A {board} agora também tem {name}, no emissor {channel}.",
+        "copied": "A {board} agora também tem: {copies}.",
         "no_other_board": "Não há outra placa para onde levar. Adicione essa placa ao Tasmota IR primeiro."
       }
     },
@@ -788,7 +852,7 @@
             "channel": "Trocar o emissor",
             "rename": "Renomear",
             "move": "Mover para outra placa",
-            "copy": "Copiar para outra placa"
+            "copy": "Copiar para outro emissor ou placa"
           }
         },
         "channel": {
@@ -821,8 +885,8 @@
           }
         },
         "copy": {
-          "title": "Copiar para outra placa",
-          "description": "Qual placa recebe uma cópia de {name}?",
+          "title": "Copiar para outro emissor ou placa",
+          "description": "Qual placa recebe uma cópia de {name}? Escolha a placa em que ele já está para pôr a cópia em outro emissor dela.",
           "data": {
             "board": "Placa"
           }
@@ -836,11 +900,27 @@
           }
         },
         "copy_target": {
-          "title": "Copiar para outra placa",
+          "title": "Copiar para outro emissor ou placa",
           "description": "{board} ganha o seu próprio {name}, com todos os comandos aprendidos, e este continua como está. Escolha o emissor lá: os emissores já usados mostram por qual aparelho.",
           "data": {
             "channel": "Emissor",
             "name": "Nome"
+          }
+        },
+        "copy_here": {
+          "title": "Copiar para outro emissor ou placa",
+          "description": "Mais um {name} vai para a {board}, com tudo o que ele já aprendeu ou tem configurado, e este continua como está. Escolha o emissor e o nome da cópia: os emissores já usados mostram por qual aparelho.",
+          "data": {
+            "channel": "Emissor",
+            "name": "Nome"
+          }
+        },
+        "copy_ready": {
+          "title": "Cópias de {name}",
+          "description": "Estas cópias são criadas na {board} quando você escolher Criar as cópias, no formato nome e número do emissor:\n\n{copies}\n\nNada existe até lá, e fechar esta janela descarta tudo.",
+          "menu_options": {
+            "copy_again": "Adicionar outra cópia",
+            "copy_done": "Criar as cópias"
           }
         }
       },
@@ -864,7 +944,7 @@
         "no_receiver": "Esta placa não tem GPIO de IRrecv, então não consegue aprender. Atribua um no template do Tasmota e recarregue a integração.",
         "reconfigure_successful": "Salvo.",
         "moved": "{name} agora está na {board}, no emissor {channel}.",
-        "copied": "A {board} agora também tem {name}, no emissor {channel}.",
+        "copied": "A {board} agora também tem: {copies}.",
         "no_other_board": "Não há outra placa para onde levar. Adicione essa placa ao Tasmota IR primeiro."
       }
     },
@@ -966,7 +1046,7 @@
             "channel": "Trocar o emissor",
             "rename": "Renomear",
             "move": "Mover para outra placa",
-            "copy": "Copiar para outra placa"
+            "copy": "Copiar para outro emissor ou placa"
           }
         },
         "channel": {
@@ -999,8 +1079,8 @@
           }
         },
         "copy": {
-          "title": "Copiar para outra placa",
-          "description": "Qual placa recebe uma cópia de {name}?",
+          "title": "Copiar para outro emissor ou placa",
+          "description": "Qual placa recebe uma cópia de {name}? Escolha a placa em que ele já está para pôr a cópia em outro emissor dela.",
           "data": {
             "board": "Placa"
           }
@@ -1014,11 +1094,27 @@
           }
         },
         "copy_target": {
-          "title": "Copiar para outra placa",
+          "title": "Copiar para outro emissor ou placa",
           "description": "{board} ganha o seu próprio {name}, com todos os comandos aprendidos, e este continua como está. Escolha o emissor lá: os emissores já usados mostram por qual aparelho.",
           "data": {
             "channel": "Emissor",
             "name": "Nome"
+          }
+        },
+        "copy_here": {
+          "title": "Copiar para outro emissor ou placa",
+          "description": "Mais um {name} vai para a {board}, com tudo o que ele já aprendeu ou tem configurado, e este continua como está. Escolha o emissor e o nome da cópia: os emissores já usados mostram por qual aparelho.",
+          "data": {
+            "channel": "Emissor",
+            "name": "Nome"
+          }
+        },
+        "copy_ready": {
+          "title": "Cópias de {name}",
+          "description": "Estas cópias são criadas na {board} quando você escolher Criar as cópias, no formato nome e número do emissor:\n\n{copies}\n\nNada existe até lá, e fechar esta janela descarta tudo.",
+          "menu_options": {
+            "copy_again": "Adicionar outra cópia",
+            "copy_done": "Criar as cópias"
           }
         }
       },
@@ -1042,7 +1138,7 @@
         "no_receiver": "Esta placa não tem GPIO de IRrecv, então não consegue aprender. Atribua um no template do Tasmota e recarregue a integração.",
         "reconfigure_successful": "Salvo.",
         "moved": "{name} agora está na {board}, no emissor {channel}.",
-        "copied": "A {board} agora também tem {name}, no emissor {channel}.",
+        "copied": "A {board} agora também tem: {copies}.",
         "no_other_board": "Não há outra placa para onde levar. Adicione essa placa ao Tasmota IR primeiro."
       }
     },
@@ -1144,7 +1240,7 @@
             "channel": "Trocar o emissor",
             "rename": "Renomear",
             "move": "Mover para outra placa",
-            "copy": "Copiar para outra placa"
+            "copy": "Copiar para outro emissor ou placa"
           }
         },
         "channel": {
@@ -1177,8 +1273,8 @@
           }
         },
         "copy": {
-          "title": "Copiar para outra placa",
-          "description": "Qual placa recebe uma cópia de {name}?",
+          "title": "Copiar para outro emissor ou placa",
+          "description": "Qual placa recebe uma cópia de {name}? Escolha a placa em que ele já está para pôr a cópia em outro emissor dela.",
           "data": {
             "board": "Placa"
           }
@@ -1192,11 +1288,27 @@
           }
         },
         "copy_target": {
-          "title": "Copiar para outra placa",
+          "title": "Copiar para outro emissor ou placa",
           "description": "{board} ganha o seu próprio {name}, com todos os comandos aprendidos, e este continua como está. Escolha o emissor lá: os emissores já usados mostram por qual aparelho.",
           "data": {
             "channel": "Emissor",
             "name": "Nome"
+          }
+        },
+        "copy_here": {
+          "title": "Copiar para outro emissor ou placa",
+          "description": "Mais um {name} vai para a {board}, com tudo o que ele já aprendeu ou tem configurado, e este continua como está. Escolha o emissor e o nome da cópia: os emissores já usados mostram por qual aparelho.",
+          "data": {
+            "channel": "Emissor",
+            "name": "Nome"
+          }
+        },
+        "copy_ready": {
+          "title": "Cópias de {name}",
+          "description": "Estas cópias são criadas na {board} quando você escolher Criar as cópias, no formato nome e número do emissor:\n\n{copies}\n\nNada existe até lá, e fechar esta janela descarta tudo.",
+          "menu_options": {
+            "copy_again": "Adicionar outra cópia",
+            "copy_done": "Criar as cópias"
           }
         }
       },
@@ -1220,7 +1332,7 @@
         "no_receiver": "Esta placa não tem GPIO de IRrecv, então não consegue aprender. Atribua um no template do Tasmota e recarregue a integração.",
         "reconfigure_successful": "Salvo.",
         "moved": "{name} agora está na {board}, no emissor {channel}.",
-        "copied": "A {board} agora também tem {name}, no emissor {channel}.",
+        "copied": "A {board} agora também tem: {copies}.",
         "no_other_board": "Não há outra placa para onde levar. Adicione essa placa ao Tasmota IR primeiro."
       }
     },

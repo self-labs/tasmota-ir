@@ -105,14 +105,16 @@ Add Integration → Tasmota IR             pick the board; its emitters are coun
     │   ├── Change the emitter           tried before it is saved
     │   ├── Rename
     │   ├── Move to another board        codes and entity ids go along
-    │   └── Copy to another board        the other board gets its own copy
+    │   └── Copy to another emitter or board
+    │                                    here or elsewhere, as many copies as you need
     ├── Ar Escritorio → Manage air conditioner
     │   ├── Settings                     model, temperature range, modes, vanes, extras
     │   ├── Read the remote again        vendor and model, from one key press
     │   ├── Change the emitter           tried before it is saved
     │   ├── Rename
     │   ├── Move to another board        settings and entity id go along
-    │   └── Copy to another board        the other board gets its own copy
+    │   └── Copy to another emitter or board
+    │                                    here or elsewhere, as many copies as you need
     └── Cinema → Manage sequence
         ├── Steps                        add, remove; ⚠ marks a step that is gone
         └── Rename
@@ -230,14 +232,14 @@ command** or **Stop here**.
 
 **Manage appliance** on any appliance offers:
 
-| Entry                        | What it does                                                    |
-| ---------------------------- | --------------------------------------------------------------- |
-| **Learn a command**          | name a key, press it, and a button appears                      |
-| **Delete a learned command** | forget one command, and its button with it                      |
-| **Change the emitter**       | tries the emitter first, then asks whether it answered          |
-| **Rename**                   | a new name; buttons, codes and emitter stay as they are         |
-| **Move to another board**    | the appliance leaves this board with its codes, entity ids kept |
-| **Copy to another board**    | the other board gets its own appliance, this one stays          |
+| Entry                                | What it does                                                    |
+| ------------------------------------ | --------------------------------------------------------------- |
+| **Learn a command**                  | name a key, press it, and a button appears                      |
+| **Delete a learned command**         | forget one command, and its button with it                      |
+| **Change the emitter**               | tries the emitter first, then asks whether it answered          |
+| **Rename**                           | a new name; buttons, codes and emitter stay as they are         |
+| **Move to another board**            | the appliance leaves this board with its codes, entity ids kept |
+| **Copy to another emitter or board** | its own appliance, with its own entities, and this one stays    |
 
 **Changing an emitter does not require learning anything again.** The code is
 stored per appliance and the emitter is looked up when it is sent. The emitters
@@ -254,9 +256,23 @@ learned code is the infrared signal itself, and every Tasmota board sends it the
 same way. Moving keeps the appliance's key, so its buttons come back with the
 same entity ids, names and areas, and dashboards and automations keep working;
 only the emitter and the name are asked again, because the other board has its
-own. Copying gives the other board an appliance of its own, with new entities,
-for the same kind of TV in two rooms. Both need the other board added to Tasmota
-IR first.
+own. Copying gives an appliance of its own, with new entities, for the same
+kind of TV in two rooms. Moving and copying to another board need that board
+added to Tasmota IR first.
+
+**Copying on the same board is how a house of identical units gets set up.**
+Learn one TV, or read one air conditioner, and copy it to the other rooms: the
+board list starts with the board the appliance is on (with a single board there
+is no list), and picking it puts the copy on another emitter of that same
+board. Several appliances can share an emitter, so the emitter may be one that
+is already in use. Each copy asks only the emitter and a name (the form suggests
+a free one, such as `Ar 2`), and then offers **Add another copy** or **Create
+the copies**. Nothing exists until that last choice, and closing the window
+discards what was asked. Everything is then created in one go, with the codes of
+every copy written before the first one is added, so none is lost to the
+reloads that follow. A copy has the learned codes of the original, or the
+vendor, model and settings of the air conditioner, and carries the original's
+other settings as they are, power sensor included: it is the same appliance.
 
 **Replacing a board** is **Configure → Move everything to another board** on
 the old one, checking the appliances on the new one, and then deleting the old
@@ -427,8 +443,8 @@ way, while the power and temperature keys decode as `AKB75215403`.
 highest temperature, which is what can be seen from across the room. Turn it off
 again once you have answered.
 
-**Rename**, **Move to another board** and **Copy to another board** work as they
-do for an appliance, carrying the settings along.
+**Rename**, **Move to another board** and **Copy to another emitter or board**
+work as they do for an appliance, carrying the settings along.
 
 ## Home Assistant's own infrared integrations
 
