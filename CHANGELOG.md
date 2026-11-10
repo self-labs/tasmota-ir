@@ -9,6 +9,8 @@ about compatibility, only when it was published.
 
 ## [Unreleased]
 
+## [2026.11.2] - 2026-11-10
+
 ### ✨ Added
 
 - **Copy an appliance onto another emitter of the same board, as many times as needed.** A house of identical units (the same air conditioner in every room of a clinic) no longer needs each one learned or read from scratch. **Manage appliance → Copy to another emitter or board** now lists the board the appliance is on first (with a single board there is no list); each copy asks an emitter, which may already be in use by another appliance, and a name, and the form suggests a free one (`Ar 2`, `Ar 3`). The menu after each form offers **Add another copy** or **Create the copies**; nothing is created until then, and all the copies are created in one go, the codes of every one written before the first is added, so none is lost to the reloads that follow. A copy has the original's learned commands, or the vendor, model and settings of an air conditioner. Works for every appliance type except a sequence, which has no copy. 6 tests, including a reload after the copies to prove the codes survive it.
@@ -201,7 +203,8 @@ about compatibility, only when it was published.
 - **Partial captures are discarded at capture time.** A truncated frame arrives with `Data` of `"0x"` and `Bits` of `0`, and storing one produces a command that is accepted, listed and reproduces nothing.
 - **Entities attach to the board's existing device.** The device info declares `connections={(CONNECTION_NETWORK_MAC, mac)}`, which is what the Tasmota integration uses, so the IR entities sit next to the board's diagnostics instead of forming a second device for the same hardware.
 
-[Unreleased]: https://github.com/self-labs/tasmota-ir/compare/v2026.11.1...HEAD
+[Unreleased]: https://github.com/self-labs/tasmota-ir/compare/v2026.11.2...HEAD
+[2026.11.2]: https://github.com/self-labs/tasmota-ir/compare/v2026.11.1...v2026.11.2
 [2026.11.1]: https://github.com/self-labs/tasmota-ir/compare/v2026.10.3...v2026.11.1
 [2026.10.3]: https://github.com/self-labs/tasmota-ir/compare/v2026.10.2...v2026.10.3
 [2026.10.2]: https://github.com/self-labs/tasmota-ir/compare/v2026.10.1...v2026.10.2
