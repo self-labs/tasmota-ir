@@ -1,4 +1,4 @@
-[![HACS Default](https://img.shields.io/badge/HACS-Default-41BDF5?logo=home-assistant&logoColor=white)](https://hacs.xyz/) [![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2025.3%2B-41BDF5?logo=home-assistant&logoColor=white)](https://www.home-assistant.io/) [![Release](https://img.shields.io/github/v/release/self-labs/tasmota-ir?color=293a44)](https://github.com/self-labs/tasmota-ir/releases) [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](https://github.com/self-labs/tasmota-ir/blob/master/LICENSE)
+[![Marketplace](https://img.shields.io/badge/Marketplace-41BDF5?logo=home-assistant&logoColor=white)](https://www.home-assistant.io/integrations/marketplace) [![Home Assistant](https://img.shields.io/badge/Home%20Assistant-2025.3%2B-41BDF5?logo=home-assistant&logoColor=white)](https://www.home-assistant.io/) [![Release](https://img.shields.io/github/v/release/self-labs/tasmota-ir?color=293a44)](https://github.com/self-labs/tasmota-ir/releases) [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](https://github.com/self-labs/tasmota-ir/blob/master/LICENSE)
 
 <!-- Every link on the line above stays absolute. HACS rewrites a relative link by
 prefixing the first "(" of the whole line, which was the first badge's image. -->
@@ -143,12 +143,14 @@ in the same menu, and takes the codes with it.
 
 ## Install
 
-### HACS
+### Marketplace
 
-[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=self-labs&repository=tasmota-ir&category=integration)
+[![Open your Home Assistant instance and open this repository in the Marketplace.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=self-labs&repository=tasmota-ir&category=integration)
 
-The button opens this repository straight in your HACS. Click **Download**, then
-restart Home Assistant.
+The button opens this repository straight in the Marketplace, which Home Assistant
+ships under **Settings → Marketplace** since 2026.11 (it replaced HACS; on an older
+Home Assistant the same button opens HACS, where the button is **Download**). Click
+**Install**, then restart Home Assistant.
 
 It works through [my.home-assistant.io](https://my.home-assistant.io/), which
 only knows how to reach your instance after you set your own URL there once,
@@ -157,10 +159,13 @@ under **Settings → System → Network → Home Assistant URL**.
 <details>
 <summary>Doing it by hand</summary>
 
-1. Open HACS and search for **Tasmota IR**. It is in the default catalogue, so
-   there is no custom repository to add.
-2. Open the entry and click **Download**.
+1. **Settings → Marketplace** and search for **Tasmota IR**. It is in the catalogue,
+   so there is no link to add.
+2. Open the entry and click **Install**.
 3. Restart Home Assistant.
+
+On Home Assistant older than 2026.11 the same steps run in HACS, where the button
+is **Download**.
 
 If you added it as a custom repository before it reached the catalogue, there is
 nothing to do: HACS treats it as a default repository on its next refresh.

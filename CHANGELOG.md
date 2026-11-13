@@ -9,6 +9,12 @@ about compatibility, only when it was published.
 
 ## [Unreleased]
 
+### 🔧 Changed
+
+- **The README installs through the Marketplace**, which replaced HACS in Home Assistant 2026.11:
+  the button opens the repository there, by hand it is **Settings → Marketplace** and a search for
+  **Tasmota IR**, then **Install**. On an older Home Assistant the same steps run in HACS.
+
 ## [2026.11.2] - 2026-11-10
 
 ### ✨ Added
@@ -202,6 +208,17 @@ about compatibility, only when it was published.
 - **Board discovery from the topic Tasmota already publishes**, so adding a board is picking it from a list rather than typing a topic.
 - **Partial captures are discarded at capture time.** A truncated frame arrives with `Data` of `"0x"` and `Bits` of `0`, and storing one produces a command that is accepted, listed and reproduces nothing.
 - **Entities attach to the board's existing device.** The device info declares `connections={(CONNECTION_NETWORK_MAC, mac)}`, which is what the Tasmota integration uses, so the IR entities sit next to the board's diagnostics instead of forming a second device for the same hardware.
+
+## Legend
+
+| Type          | Meaning                                 |
+| ------------- | --------------------------------------- |
+| ✨ Added      | new features                            |
+| 🔧 Changed    | changes in existing functionality       |
+| ⚠️ Deprecated | features that will be removed soon      |
+| 🗑️ Removed    | features removed in this release        |
+| 🐛 Fixed      | bug fixes                               |
+| 🔐 Security   | vulnerabilities addressed and hardening |
 
 [Unreleased]: https://github.com/self-labs/tasmota-ir/compare/v2026.11.2...HEAD
 [2026.11.2]: https://github.com/self-labs/tasmota-ir/compare/v2026.11.1...v2026.11.2

@@ -1,9 +1,10 @@
 # Tasmota IR: repository conventions (for AI agents)
 
-A Home Assistant custom integration, distributed through HACS, that turns any
-Tasmota board with infrared into native entities. This is Python application
-code, not documentation, so the usual engineering rules apply: it has to import
-cleanly, pass lint, and not break an existing install on upgrade.
+A Home Assistant custom integration, distributed through the Marketplace (HACS
+before Home Assistant 2026.11), that turns any Tasmota board with infrared into
+native entities. This is Python application code, not documentation, so the
+usual engineering rules apply: it has to import cleanly, pass lint, and not
+break an existing install on upgrade.
 
 ## What this integration is, in one paragraph
 
